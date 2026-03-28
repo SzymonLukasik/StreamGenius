@@ -38,7 +38,8 @@ export function useFishjamBroadcast(): UseFishjamBroadcastResult {
   const { composedStream, isReady, error: compositionError, startComposition, stopComposition } =
     useSmelterComposition()
   const localCameraStreamRef = useRef<MediaStream | null>(null)
-  const roleRef = useRef<'host' | 'guest' | null>(null)
+  /** Must be React state (not ref): preview `videoStream` is derived during render; refs do not re-render. */
+  const [broadcastRole, setBroadcastRole] = useState<'host' | 'guest' | null>(null)
 
   const [state, setState] = useState<BroadcastState>({
     isConnected: false,
@@ -79,7 +80,7 @@ export function useFishjamBroadcast(): UseFishjamBroadcastResult {
         }
 
         await joinRoom({ peerToken })
-        roleRef.current = 'host'
+        setBroadcastRole('host')
 
         setState((prev) => ({
           ...prev,
@@ -94,6 +95,7 @@ export function useFishjamBroadcast(): UseFishjamBroadcastResult {
         await setCustomSourceStream(null).catch(() => {})
         await stopComposition().catch(() => {})
         stopLocalCamera()
+        setBroadcastRole(null)
 
         setState((prev) => ({
           ...prev,
@@ -121,7 +123,7 @@ export function useFishjamBroadcast(): UseFishjamBroadcastResult {
 
       try {
         await joinRoom({ peerToken })
-        roleRef.current = 'guest'
+        setBroadcastRole('guest')
 
         setState((prev) => ({
           ...prev,
@@ -132,7 +134,7 @@ export function useFishjamBroadcast(): UseFishjamBroadcastResult {
         }))
       } catch (err) {
         leaveRoom()
-        roleRef.current = null
+        setBroadcastRole(null)
 
         setState((prev) => ({
           ...prev,
@@ -151,7 +153,7 @@ export function useFishjamBroadcast(): UseFishjamBroadcastResult {
     stopLocalCamera()
     stopMicrophone()
     leaveRoom()
-    roleRef.current = null
+    setBroadcastRole(null)
 
     setState({
       isConnected: false,
@@ -163,7 +165,7 @@ export function useFishjamBroadcast(): UseFishjamBroadcastResult {
 
   const guestVideoStream =
     remotePeers.flatMap((peer) => peer.customVideoTracks).find((track) => track.stream)?.stream ?? null
-  const videoStream = roleRef.current === 'guest' ? guestVideoStream : composedStream
+  const videoStream = broadcastRole === 'guest' ? guestVideoStream : composedStream
 
   return {
     state,

@@ -1,3 +1,5 @@
+import { mockFetchersEnabled } from '../config/dev-mocks.js'
+
 export interface SearchResult {
   title: string
   link: string
@@ -7,6 +9,11 @@ export interface SearchResult {
 const GOOGLE_SEARCH_API = 'https://www.googleapis.com/customsearch/v1'
 
 export async function searchGoogle(query: string, numResults = 3): Promise<SearchResult[]> {
+  if (mockFetchersEnabled()) {
+    console.log(`[MOCK_FETCHERS] Skipping Google Search; mock results for:`, query.slice(0, 80))
+    return getMockSearchResults(query, numResults)
+  }
+
   const apiKey = process.env.GOOGLE_SEARCH_API_KEY
   const cx = process.env.GOOGLE_SEARCH_CX
 
@@ -43,8 +50,8 @@ export async function searchGoogle(query: string, numResults = 3): Promise<Searc
   }
 }
 
-function getMockSearchResults(query: string): SearchResult[] {
-  return [
+function getMockSearchResults(query: string, numResults = 3): SearchResult[] {
+  const base: SearchResult[] = [
     {
       title: `Information about: ${query}`,
       link: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(query.replace(/\s+/g, '_')),
@@ -55,5 +62,11 @@ function getMockSearchResults(query: string): SearchResult[] {
       link: 'https://scholar.google.com/scholar?q=' + encodeURIComponent(query),
       snippet: `Academic and research papers related to ${query}.`,
     },
+    {
+      title: `FAQ: ${query}`,
+      link: 'https://example.com/faq?q=' + encodeURIComponent(query),
+      snippet: `Common questions and answers about ${query}.`,
+    },
   ]
+  return base.slice(0, Math.min(numResults, base.length))
 }

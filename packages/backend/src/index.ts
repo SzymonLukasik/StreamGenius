@@ -6,6 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 config({ path: resolve(__dirname, '../.env') })
 
 import { createServer } from './server.js'
+import { mockFetchersEnabled, mockGeminiEnabled } from './config/dev-mocks.js'
 
 const PORT = parseInt(process.env.PORT || '3001', 10)
 const FISHJAM_ID = process.env.FISHJAM_ID
@@ -17,6 +18,12 @@ async function main() {
   console.log(`  FISHJAM_ID: ${FISHJAM_ID ? '***' + FISHJAM_ID.slice(-4) : 'NOT SET'}`)
   console.log(`  FISHJAM_MANAGEMENT_TOKEN: ${FISHJAM_MANAGEMENT_TOKEN ? '***' + FISHJAM_MANAGEMENT_TOKEN.slice(-4) : 'NOT SET'}`)
   console.log(`  GEMINI_API_KEY: ${process.env.GEMINI_API_KEY ? '***' + process.env.GEMINI_API_KEY.slice(-4) : 'NOT SET'}`)
+  console.log(
+    `  MOCK_GEMINI: ${mockGeminiEnabled() ? 'ON (Gemini Pro / analyze_claim never calls API)' : 'off'}`
+  )
+  console.log(
+    `  MOCK_FETCHERS: ${mockFetchersEnabled() ? 'ON (YouTube + Google Search skipped)' : 'off'}`
+  )
 
   const server = createServer({
     port: PORT,

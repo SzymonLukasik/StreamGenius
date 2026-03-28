@@ -1,4 +1,5 @@
 import type { YoutubeData } from '@streamgenius/shared'
+import { mockFetchersEnabled } from '../config/dev-mocks.js'
 
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3'
 
@@ -6,6 +7,11 @@ export async function fetchYoutubeVideo(
   query: string,
   channelName?: string
 ): Promise<YoutubeData | null> {
+  if (mockFetchersEnabled()) {
+    console.log(`[MOCK_FETCHERS] Skipping YouTube API; mock video for:`, query.slice(0, 80))
+    return getMockYoutubeData(query)
+  }
+
   const apiKey = process.env.YOUTUBE_API_KEY
   if (!apiKey) {
     console.error('YOUTUBE_API_KEY not set')
