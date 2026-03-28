@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useFishjamBroadcast } from '../hooks/useFishjamBroadcast'
 import { useWebSocket, setFishjamCallbacks } from '../hooks/useWebSocket'
 import { useFishjamEnabled } from '../providers/FishjamProvider'
@@ -15,26 +15,36 @@ function BroadcastControlsInner() {
   const [guestRoomId, setGuestRoomId] = useState('')
   const [guestName, setGuestName] = useState('')
   const [copied, setCopied] = useState(false)
+  const [startupError, setStartupError] = useState<string | null>(null)
+  const pendingStartRef = useRef(false)
 
   // Check URL params for guest join
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const joinRoom = params.get('join')
     const name = params.get('name')
+
     if (joinRoom) {
       setGuestRoomId(joinRoom)
       setMode('guest')
     }
+
     if (name) {
       setGuestName(name)
     }
   }, [])
 
+  useEffect(() => {
+    pendingStartRef.current = pendingStart
+  }, [pendingStart])
+
   // Register Fishjam callbacks
   useEffect(() => {
     setFishjamCallbacks({
       onRoomCreated: async (roomId, streamerToken) => {
-        if (pendingStart) {
+        setStartupError(null)
+        if (pendingStartRef.current) {
+          pendingStartRef.current = false
           setPendingStart(false)
           try {
             await startBroadcast(streamerToken, roomId)
@@ -45,7 +55,9 @@ function BroadcastControlsInner() {
         }
       },
       onGuestToken: async (roomId, guestToken) => {
-        if (mode === 'guest' && pendingStart) {
+        setStartupError(null)
+        if (mode === 'guest' && pendingStartRef.current) {
+          pendingStartRef.current = false
           setPendingStart(false)
           try {
             await startBroadcast(guestToken, roomId)
@@ -57,14 +69,26 @@ function BroadcastControlsInner() {
       onRoomClosed: () => {
         setMode('idle')
       },
+      onError: (message) => {
+        pendingStartRef.current = false
+        setPendingStart(false)
+        setStartupError(message)
+      },
     })
-  }, [pendingStart, startBroadcast, mode])
+
+    return () => {
+      setFishjamCallbacks({})
+    }
+  }, [mode, startBroadcast])
 
   const handleStartBroadcast = () => {
     if (!wsConnected) {
       console.error('WebSocket not connected')
       return
     }
+
+    setStartupError(null)
+    pendingStartRef.current = true
     setPendingStart(true)
     sendMessage({ kind: 'fishjam_join', streamerId })
   }
@@ -74,6 +98,9 @@ function BroadcastControlsInner() {
       console.error('Missing roomId or name')
       return
     }
+
+    setStartupError(null)
+    pendingStartRef.current = true
     setPendingStart(true)
     setMode('guest')
     sendMessage({ kind: 'fishjam_join_as_guest', roomId: guestRoomId, guestName })
@@ -83,13 +110,16 @@ function BroadcastControlsInner() {
     if (state.roomId) {
       sendMessage({ kind: 'fishjam_leave', roomId: state.roomId })
     }
+
+    pendingStartRef.current = false
+    setPendingStart(false)
+    setStartupError(null)
     stopBroadcast()
     setMode('idle')
   }
 
   const handleCopyLink = () => {
     if (state.roomId) {
-      // Use current origin (works with ngrok/tunnel URLs)
       const baseUrl = window.location.origin
       const url = `${baseUrl}?join=${state.roomId}`
       navigator.clipboard.writeText(url)
@@ -105,7 +135,6 @@ function BroadcastControlsInner() {
     <div style={styles.container}>
       <StreamPreview stream={videoStream} isLive={state.isConnected} />
 
-      {/* Idle state - show both options */}
       {mode === 'idle' && !state.isConnected && !isStarting && (
         <>
           <div style={styles.controls}>
@@ -144,7 +173,6 @@ function BroadcastControlsInner() {
         </>
       )}
 
-      {/* Guest mode - show join form if not connected */}
       {mode === 'guest' && !state.isConnected && !isStarting && (
         <div style={styles.guestForm}>
           <input
@@ -190,9 +218,10 @@ function BroadcastControlsInner() {
         </div>
       )}
 
-      {state.error && <p style={styles.error}>Error: {state.error.message}</p>}
+      {(state.error || startupError) && (
+        <p style={styles.error}>Error: {startupError ?? state.error?.message}</p>
+      )}
 
-      {/* Room info for host */}
       {state.roomId && mode === 'host' && (
         <div style={styles.roomInfo}>
           <div style={styles.roomHeader}>
@@ -205,7 +234,6 @@ function BroadcastControlsInner() {
         </div>
       )}
 
-      {/* Room info for guest */}
       {state.roomId && mode === 'guest' && (
         <div style={styles.roomInfo}>
           <span style={styles.roomLabel}>Connected as:</span>

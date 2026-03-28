@@ -148,6 +148,10 @@ export function createServer(options: ServerOptions) {
   async function handleFishjamJoin(connection: ClientConnection, streamerId: string) {
     console.log(`handleFishjamJoin called for streamer: ${streamerId}`)
     try {
+      if (connection.roomId) {
+        await handleFishjamLeave(connection, connection.roomId)
+      }
+
       const fishjam = getFishjamService()
       console.log('Creating Fishjam room...')
       const { roomId, streamerToken, agent } = await fishjam.createStreamRoom(streamerId)
@@ -191,6 +195,10 @@ export function createServer(options: ServerOptions) {
         },
         onError: (err) => {
           console.error('Gemini Live session error:', err)
+          broadcastToRoom(roomId, {
+            kind: 'server_error',
+            message: `Gemini session error: ${formatError(err)}`,
+          })
         },
       })
 
@@ -203,11 +211,30 @@ export function createServer(options: ServerOptions) {
       })
     } catch (error) {
       console.error('Failed to create Fishjam room:', error)
+
+      const activeRoomId = connection.roomId
+      if (activeRoomId) {
+        const room = rooms.get(activeRoomId)
+        room?.geminiSession?.close()
+        rooms.delete(activeRoomId)
+
+        try {
+          const fishjam = getFishjamService()
+          await fishjam.closeRoom(activeRoomId)
+        } catch (cleanupError) {
+          console.error('Failed to clean up room after startup error:', cleanupError)
+        } finally {
+          if (connection.roomId === activeRoomId) {
+            connection.roomId = null
+            connection.role = null
+            connection.name = null
+          }
+        }
+      }
+
       sendMessage(connection.ws, {
-        kind: 'session_status',
-        connected: true,
-        sessionId: connection.id,
-        reconnecting: false,
+        kind: 'server_error',
+        message: `Failed to start broadcast: ${formatError(error)}`,
       })
     }
   }
@@ -242,6 +269,10 @@ export function createServer(options: ServerOptions) {
       console.log(`Guest token created for "${guestName}" in room ${roomId}`)
     } catch (error) {
       console.error('Failed to create guest token:', error)
+      sendMessage(connection.ws, {
+        kind: 'server_error',
+        message: `Failed to join room: ${formatError(error)}`,
+      })
     }
   }
 
@@ -271,6 +302,10 @@ export function createServer(options: ServerOptions) {
       })
     } catch (error) {
       console.error('Failed to close Fishjam room:', error)
+      sendMessage(connection.ws, {
+        kind: 'server_error',
+        message: `Failed to stop broadcast: ${formatError(error)}`,
+      })
     }
   }
 
@@ -293,4 +328,12 @@ function sendMessage(ws: WebSocket, message: ServerMessage) {
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(message))
   }
+}
+
+function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return String(error)
 }
