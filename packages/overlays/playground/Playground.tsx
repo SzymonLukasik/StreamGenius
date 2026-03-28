@@ -4,15 +4,19 @@ import type { FactData, YoutubeData, ComparisonData, ViewerData } from '@streamg
 
 const mockFact: FactData = {
   fact: "The first computer bug was an actual real bug - a moth found trapped in a Harvard Mark II computer in 1947.",
-  source: "Grace Hopper's logbook"
+  source: "Grace Hopper's logbook",
+  sourceUrl: "https://en.wikipedia.org/wiki/Software_bug",
+  confidence: 0.98,
 }
 
 const mockYoutube: YoutubeData = {
+  videoId: "dQw4w9WgXcQ",
   title: "Building a Real-time AI Assistant with Gemini Live API",
   channelName: "StreamGenius Dev",
   viewCount: 1250000,
   likeCount: 45000,
-  thumbnailUrl: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=640&auto=format&fit=crop"
+  thumbnailUrl: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=640&auto=format&fit=crop",
+  publishedAt: "2024-03-01T12:00:00Z",
 }
 
 const mockComparison: ComparisonData = {
@@ -32,7 +36,8 @@ const mockComparison: ComparisonData = {
 const mockViewer: ViewerData = {
   username: "CodeNinja99",
   comment: "This is exactly what I needed for my next stream! The integration looks seamless.",
-  avatarUrl: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100&auto=format&fit=crop"
+  timestamp: Date.now(),
+  highlightReason: "Most engaging comment",
 }
 
 type OverlayType = 'fact' | 'youtube' | 'comparison' | 'viewer'
