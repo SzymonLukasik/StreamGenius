@@ -9,6 +9,7 @@ const RECONNECT_DELAY = 3000
 interface FishjamCallbacks {
   onRoomCreated?: (roomId: string, streamerToken: string) => void
   onRoomClosed?: (roomId: string) => void
+  onError?: (message: string) => void
 }
 
 interface WebSocketState {
@@ -28,25 +29,51 @@ let globalState: WebSocketState = {
   sendMessage: () => {},
 }
 const listeners = new Set<() => void>()
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
 function notifyListeners() {
   listeners.forEach((listener) => listener())
 }
 
-function connect() {
-  if (globalWs?.readyState === WebSocket.OPEN) return
+function clearReconnectTimer() {
+  if (reconnectTimer !== null) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+}
+
+function scheduleReconnect() {
+  if (reconnectTimer !== null || listeners.size === 0) return
 
   globalState = { ...globalState, reconnecting: true }
   notifyListeners()
 
-  globalWs = new WebSocket(WS_URL)
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null
+    if (listeners.size > 0) {
+      connect()
+    }
+  }, RECONNECT_DELAY)
+}
 
-  globalWs.onopen = () => {
+function connect() {
+  if (globalWs?.readyState === WebSocket.OPEN || globalWs?.readyState === WebSocket.CONNECTING) {
+    return
+  }
+
+  clearReconnectTimer()
+  globalState = { ...globalState, reconnecting: true }
+  notifyListeners()
+
+  const ws = new WebSocket(WS_URL)
+  globalWs = ws
+
+  ws.onopen = () => {
     globalState = { ...globalState, isConnected: true, reconnecting: false }
     notifyListeners()
   }
 
-  globalWs.onmessage = (event) => {
+  ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data)
       const result = serverMessageSchema.safeParse(data)
@@ -62,13 +89,17 @@ function connect() {
     }
   }
 
-  globalWs.onclose = () => {
+  ws.onclose = () => {
+    if (globalWs === ws) {
+      globalWs = null
+    }
+
     globalState = { ...globalState, isConnected: false, sessionId: null }
     notifyListeners()
-    setTimeout(connect, RECONNECT_DELAY)
+    scheduleReconnect()
   }
 
-  globalWs.onerror = () => {}
+  ws.onerror = () => {}
 
   globalState.sendMessage = (message: ClientMessage) => {
     if (globalWs?.readyState === WebSocket.OPEN) {
@@ -110,6 +141,10 @@ function handleServerMessage(message: ServerMessage) {
     case 'reasoning':
       store.setReasoning(message.text)
       break
+
+    case 'server_error':
+      fishjamCallbacks.onError?.(message.message)
+      break
   }
 }
 
@@ -130,6 +165,25 @@ export function useWebSocket(): WebSocketState {
 
     return () => {
       listeners.delete(update)
+
+      if (listeners.size === 0) {
+        clearReconnectTimer()
+
+        if (
+          globalWs?.readyState === WebSocket.OPEN ||
+          globalWs?.readyState === WebSocket.CONNECTING
+        ) {
+          globalWs.close()
+        }
+
+        globalWs = null
+        globalState = {
+          ...globalState,
+          isConnected: false,
+          sessionId: null,
+          reconnecting: false,
+        }
+      }
     }
   }, [])
 

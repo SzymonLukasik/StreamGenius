@@ -76,6 +76,11 @@ export interface ReasoningMessage {
   timestamp: number
 }
 
+export interface ServerErrorMessage {
+  kind: 'server_error'
+  message: string
+}
+
 export type ServerMessage =
   | TranscriptMessage
   | OverlayProposalMessage
@@ -83,13 +88,29 @@ export type ServerMessage =
   | FishjamRoomCreatedMessage
   | FishjamRoomClosedMessage
   | ReasoningMessage
+  | ServerErrorMessage
 
 export type WebSocketMessage = ClientMessage | ServerMessage
 
 export function isClientMessage(msg: WebSocketMessage): msg is ClientMessage {
-  return msg.kind === 'audio_chunk' || msg.kind === 'overlay_approve' || msg.kind === 'overlay_dismiss'
+  return (
+    msg.kind === 'audio_chunk' ||
+    msg.kind === 'text_input' ||
+    msg.kind === 'overlay_approve' ||
+    msg.kind === 'overlay_dismiss' ||
+    msg.kind === 'fishjam_join' ||
+    msg.kind === 'fishjam_leave'
+  )
 }
 
 export function isServerMessage(msg: WebSocketMessage): msg is ServerMessage {
-  return msg.kind === 'transcript' || msg.kind === 'overlay_proposal' || msg.kind === 'session_status'
+  return (
+    msg.kind === 'transcript' ||
+    msg.kind === 'overlay_proposal' ||
+    msg.kind === 'session_status' ||
+    msg.kind === 'fishjam_room_created' ||
+    msg.kind === 'fishjam_room_closed' ||
+    msg.kind === 'reasoning' ||
+    msg.kind === 'server_error'
+  )
 }

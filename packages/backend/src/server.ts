@@ -132,6 +132,10 @@ export function createServer(options: ServerOptions) {
 async function handleFishjamJoin(connection: ClientConnection, streamerId: string) {
   console.log(`handleFishjamJoin called for streamer: ${streamerId}`)
   try {
+    if (connection.roomId) {
+      await handleFishjamLeave(connection, connection.roomId)
+    }
+
     const fishjam = getFishjamService()
     console.log('Creating Fishjam room...')
     const { roomId, streamerToken, agent } = await fishjam.createStreamRoom(streamerId)
@@ -165,6 +169,10 @@ async function handleFishjamJoin(connection: ClientConnection, streamerId: strin
       },
       onError: (err) => {
         console.error('Gemini Live session error:', err)
+        sendMessage(connection.ws, {
+          kind: 'server_error',
+          message: `Gemini session error: ${formatError(err)}`,
+        })
       },
     })
 
@@ -177,12 +185,24 @@ async function handleFishjamJoin(connection: ClientConnection, streamerId: strin
     })
   } catch (error) {
     console.error('Failed to create Fishjam room:', error)
-    // Send error to client
+
+    connection.geminiSession?.close()
+    connection.geminiSession = null
+
+    if (connection.roomId) {
+      try {
+        const fishjam = getFishjamService()
+        await fishjam.closeRoom(connection.roomId)
+      } catch (cleanupError) {
+        console.error('Failed to clean up room after startup error:', cleanupError)
+      } finally {
+        connection.roomId = null
+      }
+    }
+
     sendMessage(connection.ws, {
-      kind: 'session_status',
-      connected: true,
-      sessionId: connection.id,
-      reconnecting: false,
+      kind: 'server_error',
+      message: `Failed to start broadcast: ${formatError(error)}`,
     })
   }
 }
@@ -204,6 +224,10 @@ async function handleFishjamLeave(connection: ClientConnection, roomId: string) 
     })
   } catch (error) {
     console.error('Failed to close Fishjam room:', error)
+    sendMessage(connection.ws, {
+      kind: 'server_error',
+      message: `Failed to stop broadcast: ${formatError(error)}`,
+    })
   }
 }
 
@@ -211,4 +235,12 @@ function sendMessage(ws: WebSocket, message: ServerMessage) {
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(message))
   }
+}
+
+function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return String(error)
 }

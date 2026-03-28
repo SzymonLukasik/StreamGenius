@@ -136,6 +136,11 @@ export const reasoningMessageSchema = z.object({
   timestamp: z.number(),
 })
 
+export const serverErrorMessageSchema = z.object({
+  kind: z.literal('server_error'),
+  message: z.string(),
+})
+
 export const serverMessageSchema = z.discriminatedUnion('kind', [
   transcriptMessageSchema,
   overlayProposalMessageSchema,
@@ -143,6 +148,7 @@ export const serverMessageSchema = z.discriminatedUnion('kind', [
   fishjamRoomCreatedMessageSchema,
   fishjamRoomClosedMessageSchema,
   reasoningMessageSchema,
+  serverErrorMessageSchema,
 ])
 
 export const webSocketMessageSchema = z.union([clientMessageSchema, serverMessageSchema])

@@ -112,12 +112,41 @@ async function handleGeminiMessage(
 ) {
   const serverContent = message.serverContent
 
+  if (message.toolCall) {
+    const functionResponses: Array<{
+      id: string
+      name: string
+      response: { result: unknown }
+    }> = []
+
+    for (const fc of message.toolCall.functionCalls || []) {
+      if (!fc.name || !fc.id) continue
+      console.log(`Tool called: ${fc.name}`, fc.args)
+
+      const result = await toolExecutor.execute({
+        name: fc.name,
+        args: (fc.args || {}) as Record<string, unknown>,
+      })
+
+      functionResponses.push({
+        id: fc.id,
+        name: fc.name,
+        response: { result: result.response },
+      })
+    }
+
+    if (functionResponses.length > 0) {
+      console.log('Sending tool responses back to Gemini:', functionResponses.map((r) => r.name))
+      await session.sendToolResponse({ functionResponses })
+    }
+  }
+
   // Handle input audio transcription (what the user said)
   const inputTranscription = (serverContent as Record<string, unknown>)?.inputTranscription as
-    | { text?: string }
+    | { text?: string; finished?: boolean }
     | undefined
   if (inputTranscription?.text) {
-    onTranscript(inputTranscription.text, true)
+    onTranscript(inputTranscription.text, inputTranscription.finished ?? false)
   }
 
   // Handle output audio transcription (what Gemini is saying)
@@ -129,37 +158,6 @@ async function handleGeminiMessage(
   }
 
   if (!serverContent) {
-    // Check for tool calls
-    if (message.toolCall) {
-      const functionResponses: Array<{
-        id: string
-        name: string
-        response: { result: unknown }
-      }> = []
-
-      for (const fc of message.toolCall.functionCalls || []) {
-        if (!fc.name || !fc.id) continue
-        console.log(`Tool called: ${fc.name}`, fc.args)
-
-        const result = await toolExecutor.execute({
-          name: fc.name,
-          args: (fc.args || {}) as Record<string, unknown>,
-        })
-
-        // Collect responses to send back to Gemini
-        functionResponses.push({
-          id: fc.id,
-          name: fc.name,
-          response: { result: result.response },
-        })
-      }
-
-      // Send all tool responses back to Gemini
-      if (functionResponses.length > 0) {
-        console.log('Sending tool responses back to Gemini:', functionResponses.map((r) => r.name))
-        session.sendToolResponse({ functionResponses })
-      }
-    }
     return
   }
 

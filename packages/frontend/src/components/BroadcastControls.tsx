@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useFishjamBroadcast } from '../hooks/useFishjamBroadcast'
 import { useWebSocket, setFishjamCallbacks } from '../hooks/useWebSocket'
 import { useFishjamEnabled } from '../providers/FishjamProvider'
@@ -9,12 +9,20 @@ function BroadcastControlsInner() {
   const { sendMessage, isConnected: wsConnected } = useWebSocket()
   const [streamerId] = useState(() => `streamer_${Date.now()}`)
   const [pendingStart, setPendingStart] = useState(false)
+  const [startupError, setStartupError] = useState<string | null>(null)
+  const pendingStartRef = useRef(false)
+
+  useEffect(() => {
+    pendingStartRef.current = pendingStart
+  }, [pendingStart])
 
   // Register Fishjam callbacks
   useEffect(() => {
     setFishjamCallbacks({
       onRoomCreated: async (roomId, streamerToken) => {
-        if (pendingStart) {
+        setStartupError(null)
+        if (pendingStartRef.current) {
+          pendingStartRef.current = false
           setPendingStart(false)
           try {
             await startBroadcast(streamerToken, roomId)
@@ -24,8 +32,17 @@ function BroadcastControlsInner() {
         }
       },
       onRoomClosed: () => {},
+      onError: (message) => {
+        pendingStartRef.current = false
+        setPendingStart(false)
+        setStartupError(message)
+      },
     })
-  }, [pendingStart, startBroadcast])
+
+    return () => {
+      setFishjamCallbacks({})
+    }
+  }, [startBroadcast])
 
   const handleStartBroadcast = () => {
     if (!wsConnected) {
@@ -33,6 +50,8 @@ function BroadcastControlsInner() {
       return
     }
 
+    setStartupError(null)
+    pendingStartRef.current = true
     setPendingStart(true)
     sendMessage({ kind: 'fishjam_join', streamerId })
   }
@@ -41,6 +60,9 @@ function BroadcastControlsInner() {
     if (state.roomId) {
       sendMessage({ kind: 'fishjam_leave', roomId: state.roomId })
     }
+    pendingStartRef.current = false
+    setPendingStart(false)
+    setStartupError(null)
     stopBroadcast()
   }
 
@@ -70,7 +92,9 @@ function BroadcastControlsInner() {
         )}
       </div>
 
-      {state.error && <p style={styles.error}>Error: {state.error.message}</p>}
+      {(state.error || startupError) && (
+        <p style={styles.error}>Error: {startupError ?? state.error?.message}</p>
+      )}
 
       {state.roomId && (
         <div style={styles.roomInfo}>
