@@ -1,8 +1,10 @@
+import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
 import { randomUUID } from 'crypto'
 import { clientMessageSchema, type ServerMessage } from '@streamgenius/shared'
 import { createGeminiLiveSession, type GeminiLiveSession } from './gemini/live-session.js'
 import { initFishjamService, getFishjamService } from './services/fishjam.js'
+import { getThumbnailBuffer } from './fetchers/youtube.js'
 
 interface ServerOptions {
   port: number
@@ -36,7 +38,30 @@ export function createServer(options: ServerOptions) {
     console.warn('Fishjam credentials not provided, broadcasting disabled')
   }
 
-  const wss = new WebSocketServer({ port })
+  // HTTP server for thumbnail serving + WebSocket upgrade
+  const httpServer = createHttpServer((req: IncomingMessage, res: ServerResponse) => {
+    // CORS headers for Smelter WASM fetching thumbnails
+    res.setHeader('Access-Control-Allow-Origin', '*')
+
+    // Serve cached PNG thumbnails: /thumbnails/:id.png
+    const match = req.url?.match(/^\/thumbnails\/([a-f0-9-]+)\.png$/)
+    if (match) {
+      const buffer = getThumbnailBuffer(match[1])
+      if (buffer) {
+        res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': buffer.length })
+        res.end(buffer)
+        return
+      }
+      res.writeHead(404)
+      res.end('Not found')
+      return
+    }
+
+    res.writeHead(404)
+    res.end()
+  })
+
+  const wss = new WebSocketServer({ server: httpServer })
   const clients = new Map<string, ClientConnection>()
   const rooms = new Map<string, Room>()
 
@@ -309,7 +334,9 @@ export function createServer(options: ServerOptions) {
     }
   }
 
-  console.log(`WebSocket server started on port ${port}`)
+  httpServer.listen(port, () => {
+    console.log(`HTTP + WebSocket server started on port ${port}`)
+  })
 
   return {
     close: () => {
@@ -320,6 +347,7 @@ export function createServer(options: ServerOptions) {
         client.ws.close()
       }
       wss.close()
+      httpServer.close()
     },
   }
 }

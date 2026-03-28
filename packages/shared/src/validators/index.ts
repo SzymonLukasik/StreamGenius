@@ -5,7 +5,7 @@ export const youtubeDataSchema = z.object({
   title: z.string(),
   channelName: z.string(),
   thumbnailUrl: z.string().url(),
-  thumbnailBase64: z.string().optional(),
+  thumbnailPngUrl: z.string().optional(),
   viewCount: z.number().int().nonnegative(),
   likeCount: z.number().int().nonnegative(),
   publishedAt: z.string(),

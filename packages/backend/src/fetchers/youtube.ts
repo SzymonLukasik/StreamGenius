@@ -1,9 +1,17 @@
 import type { YoutubeData } from '@streamgenius/shared'
 import { Jimp } from 'jimp'
+import { randomUUID } from 'crypto'
 
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3'
 
-async function fetchThumbnailAsBase64(url: string): Promise<string | undefined> {
+// In-memory cache of PNG thumbnails served via HTTP
+const thumbnailCache = new Map<string, Buffer>()
+
+export function getThumbnailBuffer(id: string): Buffer | undefined {
+  return thumbnailCache.get(id)
+}
+
+async function fetchThumbnailAsPngUrl(url: string): Promise<string | undefined> {
   try {
     const response = await fetch(url)
     if (!response.ok) return undefined
@@ -12,17 +20,13 @@ async function fetchThumbnailAsBase64(url: string): Promise<string | undefined> 
     // Convert to PNG using Jimp (Smelter WASM doesn't support JPEG)
     const image = await Jimp.read(buffer)
     const pngBuffer = await image.getBuffer('image/png')
-    const base64 = pngBuffer.toString('base64')
 
-    // Wrap PNG in SVG for Smelter WASM compatibility
-    const width = image.width
-    const height = image.height
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-      <image href="data:image/png;base64,${base64}" width="${width}" height="${height}"/>
-    </svg>`
-    const svgBase64 = Buffer.from(svg).toString('base64')
+    // Store in cache and return an HTTP URL that Smelter can load
+    const id = randomUUID()
+    thumbnailCache.set(id, pngBuffer)
 
-    return `data:image/svg+xml;base64,${svgBase64}`
+    const port = process.env.PORT || 3001
+    return `http://localhost:${port}/thumbnails/${id}.png`
   } catch (err) {
     console.error('Failed to fetch/convert thumbnail:', err)
     return undefined
@@ -94,14 +98,14 @@ export async function fetchYoutubeVideo(
     }
 
     const thumbnailUrl = video.snippet.thumbnails.high?.url || video.snippet.thumbnails.default?.url || ''
-    const thumbnailBase64 = await fetchThumbnailAsBase64(thumbnailUrl)
+    const thumbnailPngUrl = await fetchThumbnailAsPngUrl(thumbnailUrl)
 
     return {
       videoId,
       title: video.snippet.title,
       channelName: video.snippet.channelTitle,
       thumbnailUrl,
-      thumbnailBase64,
+      thumbnailPngUrl,
       viewCount: parseInt(video.statistics.viewCount, 10) || 0,
       likeCount: parseInt(video.statistics.likeCount, 10) || 0,
       publishedAt: video.snippet.publishedAt,
@@ -114,14 +118,14 @@ export async function fetchYoutubeVideo(
 
 async function getMockYoutubeData(query: string): Promise<YoutubeData> {
   const thumbnailUrl = 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg'
-  const thumbnailBase64 = await fetchThumbnailAsBase64(thumbnailUrl)
+  const thumbnailPngUrl = await fetchThumbnailAsPngUrl(thumbnailUrl)
 
   return {
     videoId: 'dQw4w9WgXcQ',
     title: `Video about: ${query}`,
     channelName: 'Sample Channel',
     thumbnailUrl,
-    thumbnailBase64,
+    thumbnailPngUrl,
     viewCount: 1000000,
     likeCount: 50000,
     publishedAt: new Date().toISOString(),

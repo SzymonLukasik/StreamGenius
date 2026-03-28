@@ -172,7 +172,7 @@ function BroadcastControlsInner({ onMuteChange, onCapturingChange }: BroadcastCo
             <span>or join as guest</span>
           </div>
 
-          <div style={styles.guestForm}>
+          {/* <div style={styles.guestForm}>
             <input
               type="text"
               placeholder="Room ID"
@@ -194,7 +194,7 @@ function BroadcastControlsInner({ onMuteChange, onCapturingChange }: BroadcastCo
             >
               Join as Guest
             </button>
-          </div>
+          </div> */}
         </>
       )}
 
@@ -252,7 +252,7 @@ function BroadcastControlsInner({ onMuteChange, onCapturingChange }: BroadcastCo
         </p>
       )}
 
-      {state.roomId && mode === 'host' && (
+      {/* {state.roomId && mode === 'host' && (
         <div style={styles.roomInfo}>
           <div style={styles.roomHeader}>
             <span style={styles.roomLabel}>Room ID:</span>
@@ -262,7 +262,7 @@ function BroadcastControlsInner({ onMuteChange, onCapturingChange }: BroadcastCo
             {copied ? 'Copied!' : 'Copy Invite Link'}
           </button>
         </div>
-      )}
+      )} */}
 
       {state.roomId && mode === 'guest' && (
         <div style={styles.roomInfo}>

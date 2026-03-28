@@ -16,7 +16,7 @@ export interface YoutubeData {
   title: string
   channelName: string
   thumbnailUrl: string
-  thumbnailBase64?: string
+  thumbnailPngUrl?: string
   viewCount: number
   likeCount: number
   publishedAt: string

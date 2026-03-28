@@ -34,7 +34,7 @@ export default defineConfig({
     },
     proxy: {
       '/ws': {
-        target: 'ws://localhost:3002',
+        target: 'ws://localhost:3001',
         ws: true,
       },
     },

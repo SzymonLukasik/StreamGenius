@@ -54,39 +54,7 @@ export function SmelterScene() {
         </View>
       )}
 
-      <View
-        style={{
-          top: 16,
-          left: SMELTER_OUTPUT_RESOLUTION.width - 160,
-          width: 145,
-          backgroundColor: '#000000B0',
-          borderRadius: 8,
-          paddingHorizontal: 10,
-          paddingVertical: 8,
-          borderWidth: 1,
-          borderColor: '#FFFFFF1F',
-          direction: 'column',
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 14,
-            color: '#F8FAFC',
-            fontWeight: 'bold',
-          }}
-        >
-          StreamGenius
-        </Text>
-        <Text
-          style={{
-            fontSize: 9,
-            color: '#CBD5E1',
-            fontWeight: 'medium',
-          }}
-        >
-          Live
-        </Text>
-      </View>
+      
     </View>
   )
 }
@@ -109,7 +77,7 @@ function OverlayCard({ overlay }: { overlay: ClientOverlay }) {
 }
 
 function YoutubeOverlay({ data }: { data: YoutubeData }) {
-  const thumbnailSource = data.thumbnailBase64 || data.thumbnailUrl
+  const thumbnailSource = data.thumbnailPngUrl || data.thumbnailUrl
 
   return (
     <CardShell accentColor="#DC2626" eyebrow="YouTube">
