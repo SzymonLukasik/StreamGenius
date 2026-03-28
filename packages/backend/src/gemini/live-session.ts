@@ -6,7 +6,7 @@ import type { OverlayProposal } from '@streamgenius/shared'
 import { ToolExecutor } from './tool-executor.js'
 import { toolDefinitions, systemPrompt } from './tool-definitions.js'
 
-const GEMINI_MODEL = 'gemini-3.1-flash-live-preview'
+const GEMINI_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025'
 
 export interface GeminiLiveSessionOptions {
   onTranscript: (text: string, isFinal: boolean, speakerId?: string) => void
