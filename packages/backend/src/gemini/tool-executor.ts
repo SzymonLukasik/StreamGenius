@@ -24,6 +24,7 @@ const SIMILARITY_THRESHOLD = 0.6
 interface CachedResult {
   type: OverlayType
   data: OverlayData
+  trigger: string
   timestamp: number
 }
 
@@ -106,6 +107,7 @@ export class ToolExecutor {
     this.lastSearchResult = {
       type: 'youtube_card',
       data: video,
+      trigger: args.query,
       timestamp: Date.now(),
     }
 
@@ -142,6 +144,7 @@ export class ToolExecutor {
     this.lastSearchResult = {
       type: 'web_search',
       data: webSearchData,
+      trigger: args.query,
       timestamp: Date.now(),
     }
 
@@ -180,6 +183,7 @@ export class ToolExecutor {
     this.lastSearchResult = {
       type: 'fact_banner',
       data: analysis,
+      trigger: args.claim,
       timestamp: Date.now(),
     }
 
@@ -224,11 +228,7 @@ export class ToolExecutor {
 
     console.log(`Overlay data:`, JSON.stringify(overlayData, null, 2))
 
-    // Send fetching status
-    this.sendProposal(overlayId, actualType, 'fetching', overlayData)
-
-    // Send ready status with data
-    this.sendProposal(overlayId, actualType, 'ready', overlayData)
+    this.sendProposal(overlayId, actualType, 'ready', overlayData, cached.trigger)
 
     return { success: true, overlayId }
   }
@@ -237,13 +237,14 @@ export class ToolExecutor {
     id: string,
     type: OverlayType,
     status: 'fetching' | 'ready' | 'error',
-    data: OverlayData
+    data: OverlayData,
+    trigger: string
   ): void {
     const proposal: OverlayProposal = {
       id,
       type,
       status,
-      trigger: type,
+      trigger,
       timestamp: Date.now(),
       data,
     }
