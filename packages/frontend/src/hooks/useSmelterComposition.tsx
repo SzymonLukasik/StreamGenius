@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+// Browser build: no WebView (Chromium) — only View/Text/Image/etc. See SmelterScene.tsx.
 import Smelter, { setWasmBundleUrl } from '@swmansion/smelter-web-wasm'
 import { SmelterScene, SMELTER_CAMERA_INPUT_ID, SMELTER_OUTPUT_RESOLUTION } from '../components/SmelterScene'
 
@@ -8,7 +9,15 @@ import InterBoldUrl from '@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf?url
 setWasmBundleUrl('/smelter.wasm')
 
 const SMELTER_OUTPUT_ID = 'program'
-const DEFAULT_FRAMERATE = 30
+/**
+ * Smelter WASM composites each frame via WebGPU/WebGL. Chrome often logs
+ * "READ-usage buffer was read back without waiting on a fence" — that comes from the
+ * browser + Smelter pipeline, not from this file; it cannot be silenced from JS.
+ * Slightly lower FPS reduces how often that path runs (fewer logs, a bit less GPU work).
+ * If you see WebGL errors mentioning unrelated scripts (e.g. cookie-banner extensions),
+ * try a clean profile or disable extensions — they can share the page GL context.
+ */
+const DEFAULT_FRAMERATE = 24
 
 interface UseSmelterCompositionResult {
   composedStream: MediaStream | null
@@ -68,6 +77,7 @@ export function useSmelterComposition(): UseSmelterCompositionResult {
           {
             type: 'stream',
             video: { resolution: SMELTER_OUTPUT_RESOLUTION },
+            audio: false,
           }
         )
 

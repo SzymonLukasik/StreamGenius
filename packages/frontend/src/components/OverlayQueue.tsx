@@ -1,9 +1,6 @@
-import { useEffect, useState } from 'react'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { useOverlayStore } from '../store/overlays'
 import type { ClientOverlay, YoutubeData, DeepAnalysisData, WebSearchData, ComparisonData } from '@streamgenius/shared'
-
-const DISPLAY_DURATION_MS = 12_000
 
 export function OverlayQueue() {
   const { sendMessage } = useWebSocket()
@@ -117,26 +114,11 @@ export function OverlayQueue() {
 }
 
 function ActiveOverlayCard({ overlay, onHide }: { overlay: ClientOverlay; onHide: () => void }) {
-  const [remaining, setRemaining] = useState(Math.round(DISPLAY_DURATION_MS / 1000))
-
-  useEffect(() => {
-    const autoHide = setTimeout(onHide, DISPLAY_DURATION_MS)
-
-    const tick = setInterval(() => {
-      setRemaining((s) => Math.max(0, s - 1))
-    }, 1000)
-
-    return () => {
-      clearTimeout(autoHide)
-      clearInterval(tick)
-    }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
   return (
     <div style={{ ...styles.card, borderLeft: '3px solid #22c55e' }}>
       <div style={styles.cardHeader}>
         <span style={styles.type}>{formatType(overlay.type)}</span>
-        <span style={styles.countdown}>{remaining}s</span>
+        <span style={styles.countdown}>On stream</span>
       </div>
 
       <p style={styles.trigger}>&ldquo;{overlay.trigger}&rdquo;</p>

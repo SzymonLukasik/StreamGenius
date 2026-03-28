@@ -1,3 +1,9 @@
+/**
+ * Stream overlays are implemented with Smelter layout primitives (View, Text, Image, …).
+ * We do not embed `packages/overlays` HTML/React-DOM components here: Smelter's `<WebView>` needs
+ * a separate Chromium renderer and exists in the Node.js Smelter stack, not in `@swmansion/smelter-web-wasm`.
+ */
+import { useLayoutEffect, useReducer } from 'react'
 import type { ClientOverlay, ComparisonData, DeepAnalysisData, WebSearchData, YoutubeData } from '@streamgenius/shared'
 import { InputStream, Rescaler, Text, View } from '@swmansion/smelter'
 import { useOverlayStore } from '../store/overlays'
@@ -32,8 +38,25 @@ const COMP_H = 196
 
 const STACK_SHIFT = 10
 
+/**
+ * Smelter uses a separate React reconciler (WASM). Re-render when `overlays` changes only
+ * (not on every transcript tick), so `updateScene` runs and the composed MediaStream updates.
+ */
 export function SmelterScene() {
-  const overlays = useOverlayStore((state) => state.overlays)
+  const [, bump] = useReducer((n: number) => n + 1, 0)
+
+  useLayoutEffect(() => {
+    let prev = useOverlayStore.getState().overlays
+    return useOverlayStore.subscribe(() => {
+      const next = useOverlayStore.getState().overlays
+      if (next !== prev) {
+        prev = next
+        bump()
+      }
+    })
+  }, [])
+
+  const overlays = useOverlayStore.getState().overlays
   const activeOverlays = overlays.filter((overlay) => ACTIVE_OVERLAY_STATUSES.has(overlay.status))
 
   return (
@@ -54,9 +77,18 @@ export function SmelterScene() {
         <InputStream inputId={SMELTER_CAMERA_INPUT_ID} />
       </Rescaler>
 
-      {activeOverlays.map((overlay, index) => (
-        <OverlayCard key={overlay.id} overlay={overlay} stackIndex={index} />
-      ))}
+      <View
+        style={{
+          width: OUT_W,
+          height: OUT_H,
+          top: 0,
+          left: 0,
+        }}
+      >
+        {activeOverlays.map((overlay, index) => (
+          <OverlayCard key={overlay.id} overlay={overlay} stackIndex={index} />
+        ))}
+      </View>
     </View>
   )
 }
@@ -87,25 +119,20 @@ function YoutubeOverlay({ id, data, stackShift }: { id: string; data: YoutubeDat
       style={{
         width: YT_W,
         height: YT_H,
-        right: 24,
-        bottom: 20 + stackShift,
+        left: OUT_W - YT_W - 24,
+        top: OUT_H - YT_H - 20 - stackShift,
         backgroundColor: '#0C0C12F0',
         borderRadius: 10,
         borderWidth: 1,
         borderColor: '#FFFFFF18',
         direction: 'column',
-        overflow: 'hidden',
       }}
     >
       <View style={{ width: YT_W, height: 2, backgroundColor: '#E50914' }} />
 
       <View style={{ width: YT_W, height: YT_BODY_H, direction: 'row', paddingLeft: 8, paddingRight: 8, paddingTop: 8, paddingBottom: 8 }}>
         <View style={{ width: YT_THUMB_W, height: YT_THUMB_H, borderRadius: 6, overflow: 'hidden' }}>
-          {data.thumbnailUrl ? (
-            <View style={{ width: YT_THUMB_W, height: YT_THUMB_H, backgroundColor: '#252530' }}><Text style={{ color: 'white', fontSize: 10, fontFamily: 'Inter' }}>THUMB</Text></View>
-          ) : (
-            <View style={{ width: YT_THUMB_W, height: YT_THUMB_H, backgroundColor: '#252530' }} />
-          )}
+          <View style={{ width: YT_THUMB_W, height: YT_THUMB_H, backgroundColor: '#2D2D38' }} />
         </View>
 
         <View style={{ width: 8 }} />
@@ -177,13 +204,12 @@ function FactBannerOverlay({ id, data, stackShift }: { id: string; data: DeepAna
         width: FACT_W,
         height: FACT_H,
         left: Math.round((OUT_W - FACT_W) / 2),
-        bottom: 16 + stackShift,
+        top: OUT_H - FACT_H - 16 - stackShift,
         direction: 'row',
         backgroundColor: '#0A0A12F0',
         borderRadius: 8,
         borderWidth: 1,
         borderColor: '#FFFFFF14',
-        overflow: 'hidden',
       }}
     >
       <View style={{ width: 3, height: FACT_H, backgroundColor: config.accent }} />
@@ -251,14 +277,13 @@ function WebSearchOverlay({ id, data, stackShift }: { id: string; data: WebSearc
       style={{
         width: SEARCH_W,
         height: SEARCH_H,
-        right: 24,
+        left: OUT_W - SEARCH_W - 24,
         top: 48 + stackShift,
         backgroundColor: '#0C0C12F0',
         borderRadius: 10,
         borderWidth: 1,
         borderColor: '#FFFFFF18',
         direction: 'column',
-        overflow: 'hidden',
       }}
     >
       <View style={{ width: SEARCH_W, height: 2, backgroundColor: '#4285F4' }} />
@@ -322,14 +347,13 @@ function ComparisonOverlay({ id, data, stackShift }: { id: string; data: Compari
       style={{
         width: COMP_W,
         height: COMP_H,
-        left: 24,
+        left: OUT_W - COMP_W - 24,
         top: 48 + stackShift,
         backgroundColor: '#0C0C12F0',
         borderRadius: 10,
         borderWidth: 1,
         borderColor: '#FFFFFF18',
         direction: 'column',
-        overflow: 'hidden',
       }}
     >
       <View style={{ width: COMP_W, height: 2, backgroundColor: '#A855F7' }} />
