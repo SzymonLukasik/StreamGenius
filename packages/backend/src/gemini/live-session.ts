@@ -9,7 +9,7 @@ import { toolDefinitions, systemPrompt } from './tool-definitions.js'
 const GEMINI_MODEL = 'gemini-3.1-flash-live-preview'
 
 export interface GeminiLiveSessionOptions {
-  onTranscript: (text: string, isFinal: boolean) => void
+  onTranscript: (text: string, isFinal: boolean, speakerId?: string) => void
   onReasoning: (text: string) => void
   onOverlayProposal: (proposal: OverlayProposal) => void
   onError: (error: Error) => void
@@ -35,6 +35,16 @@ export async function createGeminiLiveSession(
 
   // Create output track for Gemini responses (24kHz)
   const outputTrack: AgentTrack = agent.createTrack(geminiOutputAudioSettings)
+
+  // Track speakers by peerId
+  const speakerMap = new Map<string, { name: string; lastActive: number }>()
+  let speakerCounter = 0
+  let lastActiveSpeaker: string | undefined
+
+  const getSpeakerName = () => {
+    if (!lastActiveSpeaker) return undefined
+    return speakerMap.get(lastActiveSpeaker)?.name
+  }
 
   // Connect to Gemini Live API
   const session = await genAI.live.connect({
@@ -64,7 +74,7 @@ export async function createGeminiLiveSession(
           outputTrack,
           agent,
           toolExecutor,
-          onTranscript,
+          (text, isFinal) => onTranscript(text, isFinal, getSpeakerName()),
           onReasoning
         )
       },
@@ -76,12 +86,30 @@ export async function createGeminiLiveSession(
   let lastLogTime = Date.now()
 
   agent.on('trackData', (trackData: IncomingTrackData) => {
+    const peerId = trackData.peerId as string
+    const trackMetadata = (trackData as { track?: { metadata?: { name?: string } } }).track?.metadata
+
+    // Register new speakers
+    if (!speakerMap.has(peerId)) {
+      speakerCounter++
+      // Use metadata name if available, otherwise default to Speaker N
+      const name = trackMetadata?.name || `Speaker ${speakerCounter}`
+      speakerMap.set(peerId, { name, lastActive: Date.now() })
+      console.log(`New speaker detected: ${name} (peerId: ${peerId})`, trackMetadata ? `metadata: ${JSON.stringify(trackMetadata)}` : '')
+    }
+
+    // Update last active speaker
+    const speaker = speakerMap.get(peerId)!
+    speaker.lastActive = Date.now()
+    lastActiveSpeaker = peerId
+
     chunkCount++
     const now = Date.now()
 
     // Log chunk rate every 5 seconds
     if (now - lastLogTime >= 5000) {
       console.log(`Audio chunks sent: ${chunkCount} in last 5s (${(chunkCount / 5).toFixed(1)}/sec)`)
+      console.log(`Active speakers: ${[...speakerMap.values()].map((s) => s.name).join(', ')}`)
       chunkCount = 0
       lastLogTime = now
     }
