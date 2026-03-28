@@ -15,6 +15,9 @@ pnpm install
 # Start development servers (frontend + backend)
 pnpm dev
 
+# Run Overlay Playground (Test environment for stream graphics)
+pnpm --filter @streamgenius/overlays playground
+
 # Or run individual packages
 pnpm --filter @streamgenius/frontend dev
 pnpm --filter @streamgenius/backend dev
