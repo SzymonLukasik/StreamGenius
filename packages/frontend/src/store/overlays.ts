@@ -34,6 +34,51 @@ function parseTranscript(text: string): { speaker: string; message: string } {
   return { speaker: 'Unknown', message: text }
 }
 
+// Time window to accumulate messages from same speaker (ms)
+const ACCUMULATE_WINDOW_MS = 10000
+
+// Intelligently merge new text with existing text
+function mergeText(existing: string, incoming: string): string {
+  if (!existing) return incoming
+  if (!incoming) return existing
+
+  const existingLower = existing.toLowerCase().trim()
+  const incomingLower = incoming.toLowerCase().trim()
+
+  // Case 1: Incoming is an extension of existing (Gemini sent accumulated text)
+  // e.g., existing="Python", incoming="Python is faster"
+  if (incomingLower.startsWith(existingLower)) {
+    return incoming
+  }
+
+  // Case 2: Existing ends with start of incoming (overlap)
+  // e.g., existing="Python is", incoming="is faster" -> "Python is faster"
+  for (let i = Math.min(existing.length, 20); i > 0; i--) {
+    const existingEnd = existingLower.slice(-i)
+    if (incomingLower.startsWith(existingEnd)) {
+      return existing + incoming.slice(i)
+    }
+  }
+
+  // Case 3: Check if incoming continues a partial word
+  // e.g., existing="Py", incoming="thon" -> "Python"
+  const lastWord = existing.split(/\s+/).pop() || ''
+  const firstWord = incoming.split(/\s+/)[0] || ''
+
+  // If last char of existing is a letter and first char of incoming is a letter (no space)
+  // and together they could form a word, concatenate without space
+  if (lastWord && firstWord &&
+      /[a-zA-Z]$/.test(existing) &&
+      /^[a-zA-Z]/.test(incoming) &&
+      !existing.endsWith(' ') &&
+      lastWord.length < 10) {
+    return existing + incoming
+  }
+
+  // Case 4: Default - append with space
+  return existing + ' ' + incoming
+}
+
 export const useOverlayStore = create<OverlayState>((set) => ({
   overlays: [],
   transcript: '',
@@ -83,51 +128,23 @@ export const useOverlayStore = create<OverlayState>((set) => ({
         return { transcript: text, transcriptFinal: isFinal }
       }
 
-      // If not final, update the last message from this speaker (live update)
-      if (!isFinal) {
-        const lastMsg = state.transcriptMessages[state.transcriptMessages.length - 1]
-        if (lastMsg && lastMsg.speaker === speaker && !lastMsg.isFinal) {
-          // Update last message in place
-          return {
-            transcript: text,
-            transcriptFinal: isFinal,
-            transcriptMessages: [
-              ...state.transcriptMessages.slice(0, -1),
-              { ...lastMsg, text: message },
-            ],
-          }
-        }
-        // New interim message
-        return {
-          transcript: text,
-          transcriptFinal: isFinal,
-          transcriptMessages: [
-            ...state.transcriptMessages,
-            {
-              id: `msg-${Date.now()}`,
-              speaker,
-              text: message,
-              timestamp: Date.now(),
-              isFinal: false,
-            },
-          ],
-        }
-      }
-
-      // Final message - mark last interim as final or add new
+      const now = Date.now()
       const lastMsg = state.transcriptMessages[state.transcriptMessages.length - 1]
-      if (lastMsg && lastMsg.speaker === speaker && !lastMsg.isFinal) {
+
+      // Update last message if same speaker and within time window
+      // Gemini sends full accumulated text, so REPLACE (don't append)
+      if (lastMsg && lastMsg.speaker === speaker && now - lastMsg.timestamp < ACCUMULATE_WINDOW_MS) {
         return {
           transcript: text,
           transcriptFinal: isFinal,
           transcriptMessages: [
             ...state.transcriptMessages.slice(0, -1),
-            { ...lastMsg, text: message, isFinal: true },
+            { ...lastMsg, text: message, timestamp: now, isFinal },
           ],
         }
       }
 
-      // New final message
+      // New message (different speaker or too much time passed)
       return {
         transcript: text,
         transcriptFinal: isFinal,
@@ -137,8 +154,8 @@ export const useOverlayStore = create<OverlayState>((set) => ({
             id: `msg-${Date.now()}`,
             speaker,
             text: message,
-            timestamp: Date.now(),
-            isFinal: true,
+            timestamp: now,
+            isFinal,
           },
         ],
       }

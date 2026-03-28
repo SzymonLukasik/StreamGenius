@@ -6,7 +6,8 @@ import type { OverlayProposal } from '@streamgenius/shared'
 import { ToolExecutor } from './tool-executor.js'
 import { toolDefinitions, systemPrompt } from './tool-definitions.js'
 
-const GEMINI_MODEL = 'gemini-3.1-flash-live-preview'
+const GEMINI_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025'
+const TOOL_CALL_DEBOUNCE_MS = 5000
 
 export interface GeminiLiveSessionOptions {
   onTranscript: (text: string, isFinal: boolean, speakerId?: string) => void
@@ -33,6 +34,52 @@ export async function createGeminiLiveSession(
   const genAI = new GoogleGenAI({ apiKey })
   const toolExecutor = new ToolExecutor({ onOverlayProposal })
 
+  // Debounce tool calls - wait 5 seconds before executing
+  let pendingToolCalls: Array<{ id: string; name: string; args: Record<string, unknown> }> = []
+  let toolCallTimer: NodeJS.Timeout | null = null
+
+  const executeToolCalls = async (session: Session) => {
+    if (pendingToolCalls.length === 0) return
+
+    const toolsToExecute = [...pendingToolCalls]
+    pendingToolCalls = []
+    toolCallTimer = null
+
+    const functionResponses: Array<{
+      id: string
+      name: string
+      response: { result: unknown }
+    }> = []
+
+    for (const tc of toolsToExecute) {
+      console.log(`Executing tool: ${tc.name}`, tc.args)
+      const result = await toolExecutor.execute({
+        name: tc.name,
+        args: tc.args,
+      })
+      functionResponses.push({
+        id: tc.id,
+        name: tc.name,
+        response: { result: result.response },
+      })
+    }
+
+    if (functionResponses.length > 0) {
+      console.log('Sending tool responses back to Gemini:', functionResponses.map((r) => r.name))
+      session.sendToolResponse({ functionResponses })
+    }
+  }
+
+  const queueToolCall = (session: Session, id: string, name: string, args: Record<string, unknown>) => {
+    pendingToolCalls.push({ id, name, args })
+
+    // Reset timer on each new tool call
+    if (toolCallTimer) {
+      clearTimeout(toolCallTimer)
+    }
+    toolCallTimer = setTimeout(() => executeToolCalls(session), TOOL_CALL_DEBOUNCE_MS)
+  }
+
   // Create output track for Gemini responses (24kHz)
   const outputTrack: AgentTrack = agent.createTrack(geminiOutputAudioSettings)
 
@@ -53,6 +100,13 @@ export async function createGeminiLiveSession(
       responseModalities: [Modality.AUDIO],
       inputAudioTranscription: {},
       outputAudioTranscription: {},
+      speechConfig: {
+        voiceConfig: {
+          prebuiltVoiceConfig: {
+            voiceName: 'Kore', // English voice
+          },
+        },
+      },
       systemInstruction: systemPrompt,
       tools: [{ functionDeclarations: toolDefinitions }],
     },
@@ -73,7 +127,7 @@ export async function createGeminiLiveSession(
           session,
           outputTrack,
           agent,
-          toolExecutor,
+          (tc) => queueToolCall(session, tc.id, tc.name, tc.args),
           (text, isFinal) => onTranscript(text, isFinal, getSpeakerName()),
           onReasoning
         )
@@ -126,6 +180,9 @@ export async function createGeminiLiveSession(
 
   return {
     close: () => {
+      if (toolCallTimer) {
+        clearTimeout(toolCallTimer)
+      }
       agent.off('trackData', handleTrackData)
       session.close()
     },
@@ -134,10 +191,10 @@ export async function createGeminiLiveSession(
 
 async function handleGeminiMessage(
   message: LiveServerMessage,
-  session: Session,
+  _session: Session,
   outputTrack: AgentTrack,
   agent: FishjamAgent,
-  toolExecutor: ToolExecutor,
+  queueToolCall: (tc: { id: string; name: string; args: Record<string, unknown> }) => void,
   onTranscript: (text: string, isFinal: boolean) => void,
   onReasoning: (text: string) => void
 ) {
@@ -148,6 +205,7 @@ async function handleGeminiMessage(
     | { text?: string }
     | undefined
   if (inputTranscription?.text) {
+    // Send immediately for live display
     onTranscript(inputTranscription.text, true)
   }
 
@@ -160,35 +218,16 @@ async function handleGeminiMessage(
   }
 
   if (!serverContent) {
-    // Check for tool calls
+    // Check for tool calls - queue them for debounced execution
     if (message.toolCall) {
-      const functionResponses: Array<{
-        id: string
-        name: string
-        response: { result: unknown }
-      }> = []
-
       for (const fc of message.toolCall.functionCalls || []) {
         if (!fc.name || !fc.id) continue
-        console.log(`Tool called: ${fc.name}`, fc.args)
-
-        const result = await toolExecutor.execute({
+        console.log(`Tool call queued: ${fc.name}`, fc.args)
+        queueToolCall({
+          id: fc.id,
           name: fc.name,
           args: (fc.args || {}) as Record<string, unknown>,
         })
-
-        // Collect responses to send back to Gemini
-        functionResponses.push({
-          id: fc.id,
-          name: fc.name,
-          response: { result: result.response },
-        })
-      }
-
-      // Send all tool responses back to Gemini
-      if (functionResponses.length > 0) {
-        console.log('Sending tool responses back to Gemini:', functionResponses.map((r) => r.name))
-        session.sendToolResponse({ functionResponses })
       }
     }
     return
