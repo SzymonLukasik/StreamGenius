@@ -23,6 +23,8 @@ interface WebSocketState {
 let fishjamCallbacks: FishjamCallbacks = {}
 
 let globalWs: WebSocket | null = null
+/** Socket we treat as authoritative; stale instances (e.g. Strict Mode teardown) close only after open to avoid "closed before established". */
+let activeSocket: WebSocket | null = null
 let globalState: WebSocketState = {
   isConnected: false,
   sessionId: null,
@@ -58,7 +60,7 @@ function scheduleReconnect() {
 }
 
 function connect() {
-  if (globalWs?.readyState === WebSocket.OPEN || globalWs?.readyState === WebSocket.CONNECTING) {
+  if (activeSocket?.readyState === WebSocket.OPEN || activeSocket?.readyState === WebSocket.CONNECTING) {
     return
   }
 
@@ -68,8 +70,13 @@ function connect() {
 
   const ws = new WebSocket(WS_URL)
   globalWs = ws
+  activeSocket = ws
 
   ws.onopen = () => {
+    if (activeSocket !== ws) {
+      ws.close()
+      return
+    }
     globalState = { ...globalState, isConnected: true, reconnecting: false }
     notifyListeners()
   }
@@ -91,9 +98,12 @@ function connect() {
   }
 
   ws.onclose = () => {
-    if (globalWs === ws) {
-      globalWs = null
+    // Another socket replaced this one, or we're ignoring a dead connection
+    if (activeSocket !== null && activeSocket !== ws) {
+      return
     }
+    activeSocket = null
+    globalWs = null
 
     globalState = { ...globalState, isConnected: false, sessionId: null }
     notifyListeners()
@@ -103,8 +113,8 @@ function connect() {
   ws.onerror = () => {}
 
   globalState.sendMessage = (message: ClientMessage) => {
-    if (globalWs?.readyState === WebSocket.OPEN) {
-      globalWs.send(JSON.stringify(message))
+    if (activeSocket?.readyState === WebSocket.OPEN) {
+      activeSocket.send(JSON.stringify(message))
     }
   }
 }
@@ -174,14 +184,16 @@ export function useWebSocket(): WebSocketState {
       if (listeners.size === 0) {
         clearReconnectTimer()
 
-        if (
-          globalWs?.readyState === WebSocket.OPEN ||
-          globalWs?.readyState === WebSocket.CONNECTING
-        ) {
-          globalWs.close()
+        activeSocket = null
+
+        const ws = globalWs
+        globalWs = null
+
+        // Closing while CONNECTING triggers a noisy browser warning; stale sockets exit in onopen.
+        if (ws?.readyState === WebSocket.OPEN) {
+          ws.close()
         }
 
-        globalWs = null
         globalState = {
           ...globalState,
           isConnected: false,
