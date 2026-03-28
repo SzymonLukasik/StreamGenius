@@ -23,6 +23,7 @@ export async function searchGoogle(query: string, numResults = 3): Promise<Searc
     url.searchParams.set('num', String(numResults))
 
     const response = await fetch(url.toString())
+    if (!response.ok) throw new Error(`Google Search API error: ${response.status}`)
     const data = (await response.json()) as { items?: Array<{ title: string; link: string; snippet: string }> }
 
     if (!data.items || data.items.length === 0) {

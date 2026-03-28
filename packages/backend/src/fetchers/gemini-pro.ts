@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai'
 import type { DeepAnalysisData } from '@streamgenius/shared'
+import { deepAnalysisDataSchema } from '@streamgenius/shared'
 
 export async function analyzeWithGeminiPro(
   claim: string,
@@ -37,8 +38,8 @@ Be concise. Include 2-3 credible sources if possible. Return ONLY the JSON objec
 
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]) as Omit<DeepAnalysisData, 'claim'>
-      return { claim, ...parsed }
+      const validated = deepAnalysisDataSchema.safeParse({ claim, ...JSON.parse(jsonMatch[0]) })
+      if (validated.success) return validated.data
     }
 
     return getMockAnalysis(claim)

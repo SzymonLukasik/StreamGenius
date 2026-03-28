@@ -85,7 +85,7 @@ export async function createGeminiLiveSession(
   let chunkCount = 0
   let lastLogTime = Date.now()
 
-  agent.on('trackData', (trackData: IncomingTrackData) => {
+  const handleTrackData = (trackData: IncomingTrackData) => {
     const peerId = trackData.peerId as string
     const trackMetadata = (trackData as { track?: { metadata?: { name?: string } } }).track?.metadata
 
@@ -120,10 +120,13 @@ export async function createGeminiLiveSession(
         data: Buffer.from(trackData.data).toString('base64'),
       },
     })
-  })
+  }
+
+  agent.on('trackData', handleTrackData)
 
   return {
     close: () => {
+      agent.off('trackData', handleTrackData)
       session.close()
     },
   }
