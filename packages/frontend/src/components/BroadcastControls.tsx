@@ -7,7 +7,15 @@ import { StreamPreview } from './StreamPreview'
 type Mode = 'idle' | 'host' | 'guest'
 
 function BroadcastControlsInner() {
-  const { state, startBroadcast, stopBroadcast, videoStream } = useFishjamBroadcast()
+  const {
+    state,
+    startBroadcast,
+    joinAsGuest,
+    stopBroadcast,
+    videoStream,
+    compositionReady,
+    compositionError,
+  } = useFishjamBroadcast()
   const { sendMessage, isConnected: wsConnected } = useWebSocket()
   const [streamerId] = useState(() => `streamer_${Date.now()}`)
   const [pendingStart, setPendingStart] = useState(false)
@@ -18,7 +26,6 @@ function BroadcastControlsInner() {
   const [startupError, setStartupError] = useState<string | null>(null)
   const pendingStartRef = useRef(false)
 
-  // Check URL params for guest join
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const joinRoom = params.get('join')
@@ -38,7 +45,6 @@ function BroadcastControlsInner() {
     pendingStartRef.current = pendingStart
   }, [pendingStart])
 
-  // Register Fishjam callbacks
   useEffect(() => {
     setFishjamCallbacks({
       onRoomCreated: async (roomId, streamerToken) => {
@@ -60,7 +66,7 @@ function BroadcastControlsInner() {
           pendingStartRef.current = false
           setPendingStart(false)
           try {
-            await startBroadcast(guestToken, roomId)
+            await joinAsGuest(guestToken, roomId)
           } catch (err) {
             console.error('Failed to join as guest:', err)
           }
@@ -79,7 +85,7 @@ function BroadcastControlsInner() {
     return () => {
       setFishjamCallbacks({})
     }
-  }, [mode, startBroadcast])
+  }, [joinAsGuest, mode, startBroadcast])
 
   const handleStartBroadcast = () => {
     if (!wsConnected) {
@@ -106,7 +112,7 @@ function BroadcastControlsInner() {
     sendMessage({ kind: 'fishjam_join_as_guest', roomId: guestRoomId, guestName })
   }
 
-  const handleStopBroadcast = () => {
+  const handleStopBroadcast = async () => {
     if (state.roomId) {
       sendMessage({ kind: 'fishjam_leave', roomId: state.roomId })
     }
@@ -114,7 +120,7 @@ function BroadcastControlsInner() {
     pendingStartRef.current = false
     setPendingStart(false)
     setStartupError(null)
-    stopBroadcast()
+    await stopBroadcast()
     setMode('idle')
   }
 
@@ -133,7 +139,12 @@ function BroadcastControlsInner() {
 
   return (
     <div style={styles.container}>
-      <StreamPreview stream={videoStream} isLive={state.isConnected} />
+      <StreamPreview
+        stream={videoStream}
+        isLive={state.isConnected}
+        compositionReady={compositionReady}
+        compositionError={mode === 'host' ? compositionError?.message ?? null : null}
+      />
 
       {mode === 'idle' && !state.isConnected && !isStarting && (
         <>
@@ -212,14 +223,16 @@ function BroadcastControlsInner() {
 
       {state.isConnected && (
         <div style={styles.controls}>
-          <button onClick={handleStopBroadcast} style={styles.stopButton}>
+          <button onClick={() => void handleStopBroadcast()} style={styles.stopButton}>
             {mode === 'host' ? 'Stop Broadcast' : 'Leave Room'}
           </button>
         </div>
       )}
 
-      {(state.error || startupError) && (
-        <p style={styles.error}>Error: {startupError ?? state.error?.message}</p>
+      {(state.error || startupError || (mode === 'host' && compositionError)) && (
+        <p style={styles.error}>
+          Error: {startupError ?? (mode === 'host' ? compositionError?.message : null) ?? state.error?.message}
+        </p>
       )}
 
       {state.roomId && mode === 'host' && (

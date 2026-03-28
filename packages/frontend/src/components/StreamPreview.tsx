@@ -3,9 +3,16 @@ import { useRef, useEffect } from 'react'
 interface StreamPreviewProps {
   stream: MediaStream | null
   isLive: boolean
+  compositionReady: boolean
+  compositionError: string | null
 }
 
-export function StreamPreview({ stream, isLive }: StreamPreviewProps) {
+export function StreamPreview({
+  stream,
+  isLive,
+  compositionReady,
+  compositionError,
+}: StreamPreviewProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
@@ -42,10 +49,20 @@ export function StreamPreview({ stream, isLive }: StreamPreviewProps) {
 
       <div style={styles.info}>
         <p style={styles.infoText}>
-          {stream ? 'Camera active' : 'Start broadcast to enable camera'}
+          {compositionError
+            ? 'Smelter compositor failed to start'
+            : stream && compositionReady
+              ? 'Composed stream active'
+              : stream
+                ? 'Preparing composed stream'
+                : 'Start broadcast to build the composed stream'}
         </p>
-        {/* Smelter overlay composition will be integrated here */}
-        <p style={styles.note}>Smelter compositor integration pending</p>
+        <p style={styles.note}>
+          {compositionError ??
+            (stream && compositionReady
+              ? 'Fishjam is publishing the Smelter-composed program feed.'
+              : 'The preview will switch from raw capture to the composed program output once broadcast starts.')}
+        </p>
       </div>
     </div>
   )
