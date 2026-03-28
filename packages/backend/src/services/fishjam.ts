@@ -1,4 +1,4 @@
-import { FishjamClient, type RoomId, type FishjamAgent } from '@fishjam-cloud/js-server-sdk'
+import { FishjamClient, RoomType, type RoomId, type FishjamAgent } from '@fishjam-cloud/js-server-sdk'
 import { geminiInputAudioSettings } from '@fishjam-cloud/js-server-sdk/gemini'
 
 export interface FishjamConfig {
@@ -36,12 +36,14 @@ export class FishjamService {
   }
 
   async createStreamRoom(streamerId: string): Promise<CreateRoomResult> {
-    // Use regular room type (supports agents for Gemini integration)
-    const room = await this.client.createRoom()
+    // Use conference room type for multiple speakers with audio
+    const room = await this.client.createRoom({
+      roomType: RoomType.Conference,
+    })
 
-    // Create peer token for the streamer
+    // Create peer token for the host/streamer
     const { peerToken: streamerToken } = await this.client.createPeer(room.id, {
-      metadata: { role: 'streamer', streamerId },
+      metadata: { role: 'host', streamerId, name: 'Host' },
     })
 
     // Create an agent that subscribes to audio in Gemini-compatible format (16kHz)
@@ -61,6 +63,16 @@ export class FishjamService {
     console.log(`Created room ${room.id} with agent for streamer ${streamerId}`)
 
     return { roomId: room.id, streamerToken, agent }
+  }
+
+  async createGuestToken(roomId: string, guestName: string): Promise<{ guestToken: string }> {
+    const { peerToken: guestToken } = await this.client.createPeer(roomId as RoomId, {
+      metadata: { role: 'guest', name: guestName },
+    })
+
+    console.log(`Created guest token for ${guestName} in room ${roomId}`)
+
+    return { guestToken }
   }
 
   async createViewerToken(roomId: string, viewerId?: string): Promise<CreateViewerResult> {

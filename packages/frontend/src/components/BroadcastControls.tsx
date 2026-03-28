@@ -4,11 +4,31 @@ import { useWebSocket, setFishjamCallbacks } from '../hooks/useWebSocket'
 import { useFishjamEnabled } from '../providers/FishjamProvider'
 import { StreamPreview } from './StreamPreview'
 
+type Mode = 'idle' | 'host' | 'guest'
+
 function BroadcastControlsInner() {
   const { state, startBroadcast, stopBroadcast, videoStream } = useFishjamBroadcast()
   const { sendMessage, isConnected: wsConnected } = useWebSocket()
   const [streamerId] = useState(() => `streamer_${Date.now()}`)
   const [pendingStart, setPendingStart] = useState(false)
+  const [mode, setMode] = useState<Mode>('idle')
+  const [guestRoomId, setGuestRoomId] = useState('')
+  const [guestName, setGuestName] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  // Check URL params for guest join
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const joinRoom = params.get('join')
+    const name = params.get('name')
+    if (joinRoom) {
+      setGuestRoomId(joinRoom)
+      setMode('guest')
+    }
+    if (name) {
+      setGuestName(name)
+    }
+  }, [])
 
   // Register Fishjam callbacks
   useEffect(() => {
@@ -18,23 +38,45 @@ function BroadcastControlsInner() {
           setPendingStart(false)
           try {
             await startBroadcast(streamerToken, roomId)
+            setMode('host')
           } catch (err) {
             console.error('Failed to start broadcast:', err)
           }
         }
       },
-      onRoomClosed: () => {},
+      onGuestToken: async (roomId, guestToken) => {
+        if (mode === 'guest' && pendingStart) {
+          setPendingStart(false)
+          try {
+            await startBroadcast(guestToken, roomId)
+          } catch (err) {
+            console.error('Failed to join as guest:', err)
+          }
+        }
+      },
+      onRoomClosed: () => {
+        setMode('idle')
+      },
     })
-  }, [pendingStart, startBroadcast])
+  }, [pendingStart, startBroadcast, mode])
 
   const handleStartBroadcast = () => {
     if (!wsConnected) {
       console.error('WebSocket not connected')
       return
     }
-
     setPendingStart(true)
     sendMessage({ kind: 'fishjam_join', streamerId })
+  }
+
+  const handleJoinAsGuest = () => {
+    if (!wsConnected || !guestRoomId || !guestName) {
+      console.error('Missing roomId or name')
+      return
+    }
+    setPendingStart(true)
+    setMode('guest')
+    sendMessage({ kind: 'fishjam_join_as_guest', roomId: guestRoomId, guestName })
   }
 
   const handleStopBroadcast = () => {
@@ -42,6 +84,19 @@ function BroadcastControlsInner() {
       sendMessage({ kind: 'fishjam_leave', roomId: state.roomId })
     }
     stopBroadcast()
+    setMode('idle')
+  }
+
+  const handleCopyLink = () => {
+    if (state.roomId) {
+      // Use current origin (works with ngrok/tunnel URLs)
+      const baseUrl = window.location.origin
+      const url = `${baseUrl}?join=${state.roomId}`
+      navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+      console.log('Invite link:', url)
+    }
   }
 
   const isStarting = pendingStart || state.isConnecting
@@ -50,32 +105,111 @@ function BroadcastControlsInner() {
     <div style={styles.container}>
       <StreamPreview stream={videoStream} isLive={state.isConnected} />
 
-      <div style={styles.controls}>
-        {!state.isConnected && !isStarting && (
-          <button onClick={handleStartBroadcast} disabled={!wsConnected} style={styles.startButton}>
-            Start Broadcast
-          </button>
-        )}
+      {/* Idle state - show both options */}
+      {mode === 'idle' && !state.isConnected && !isStarting && (
+        <>
+          <div style={styles.controls}>
+            <button onClick={handleStartBroadcast} disabled={!wsConnected} style={styles.startButton}>
+              Start as Host
+            </button>
+          </div>
 
-        {isStarting && (
+          <div style={styles.divider}>
+            <span>or join as guest</span>
+          </div>
+
+          <div style={styles.guestForm}>
+            <input
+              type="text"
+              placeholder="Room ID"
+              value={guestRoomId}
+              onChange={(e) => setGuestRoomId(e.target.value)}
+              style={styles.input}
+            />
+            <input
+              type="text"
+              placeholder="Your Name"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              style={styles.input}
+            />
+            <button
+              onClick={handleJoinAsGuest}
+              disabled={!wsConnected || !guestRoomId || !guestName}
+              style={styles.joinButton}
+            >
+              Join as Guest
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Guest mode - show join form if not connected */}
+      {mode === 'guest' && !state.isConnected && !isStarting && (
+        <div style={styles.guestForm}>
+          <input
+            type="text"
+            placeholder="Room ID"
+            value={guestRoomId}
+            onChange={(e) => setGuestRoomId(e.target.value)}
+            style={styles.input}
+          />
+          <input
+            type="text"
+            placeholder="Your Name"
+            value={guestName}
+            onChange={(e) => setGuestName(e.target.value)}
+            style={styles.input}
+          />
+          <button
+            onClick={handleJoinAsGuest}
+            disabled={!wsConnected || !guestRoomId || !guestName}
+            style={styles.joinButton}
+          >
+            Join as Guest
+          </button>
+          <button onClick={() => setMode('idle')} style={styles.backButton}>
+            Back
+          </button>
+        </div>
+      )}
+
+      {isStarting && (
+        <div style={styles.controls}>
           <button disabled style={styles.connectingButton}>
             {pendingStart ? 'Creating room...' : 'Connecting...'}
           </button>
-        )}
+        </div>
+      )}
 
-        {state.isConnected && (
+      {state.isConnected && (
+        <div style={styles.controls}>
           <button onClick={handleStopBroadcast} style={styles.stopButton}>
-            Stop Broadcast
+            {mode === 'host' ? 'Stop Broadcast' : 'Leave Room'}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {state.error && <p style={styles.error}>Error: {state.error.message}</p>}
 
-      {state.roomId && (
+      {/* Room info for host */}
+      {state.roomId && mode === 'host' && (
         <div style={styles.roomInfo}>
-          <span style={styles.roomLabel}>Room ID:</span>
-          <code style={styles.roomId}>{state.roomId}</code>
+          <div style={styles.roomHeader}>
+            <span style={styles.roomLabel}>Room ID:</span>
+            <code style={styles.roomId}>{state.roomId}</code>
+          </div>
+          <button onClick={handleCopyLink} style={styles.copyButton}>
+            {copied ? 'Copied!' : 'Copy Invite Link'}
+          </button>
+        </div>
+      )}
+
+      {/* Room info for guest */}
+      {state.roomId && mode === 'guest' && (
+        <div style={styles.roomInfo}>
+          <span style={styles.roomLabel}>Connected as:</span>
+          <span style={styles.guestNameDisplay}>{guestName}</span>
         </div>
       )}
     </div>
@@ -146,11 +280,16 @@ const styles: Record<string, React.CSSProperties> = {
   },
   roomInfo: {
     display: 'flex',
-    alignItems: 'center',
+    flexDirection: 'column',
     gap: '8px',
-    padding: '8px 12px',
+    padding: '12px',
     backgroundColor: '#262626',
     borderRadius: '6px',
+  },
+  roomHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
   },
   roomLabel: {
     fontSize: '12px',
@@ -160,6 +299,60 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '12px',
     color: '#22c55e',
     fontFamily: 'monospace',
+  },
+  copyButton: {
+    padding: '8px 16px',
+    backgroundColor: '#3b82f6',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '12px',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    color: '#666',
+    fontSize: '12px',
+  },
+  guestForm: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  input: {
+    padding: '10px 12px',
+    backgroundColor: '#1a1a1a',
+    border: '1px solid #333',
+    borderRadius: '6px',
+    color: '#fff',
+    fontSize: '14px',
+  },
+  joinButton: {
+    padding: '12px 24px',
+    backgroundColor: '#8b5cf6',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  backButton: {
+    padding: '8px 16px',
+    backgroundColor: 'transparent',
+    color: '#888',
+    border: '1px solid #444',
+    borderRadius: '6px',
+    fontSize: '12px',
+    cursor: 'pointer',
+  },
+  guestNameDisplay: {
+    fontSize: '14px',
+    color: '#8b5cf6',
+    fontWeight: 600,
   },
   disabledMessage: {
     padding: '24px',
