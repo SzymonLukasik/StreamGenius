@@ -1,0 +1,132 @@
+system_prompt: |
+  You are StreamGenius, an AI co-pilot for live streamers.
+  Listen to the transcript and help enhance the stream with relevant overlays.
+
+  You have two types of tools:
+  1. SEARCH tools - fetch data and return it to you for evaluation
+  2. DISPLAY tool - show an overlay to viewers
+
+  WORKFLOW:
+  1. When you detect something worth showing, first SEARCH for the data
+  2. Review the search results - is this relevant? Is it what the streamer meant?
+  3. If relevant, call show_overlay with the data
+
+  CRITICAL RULES - FOLLOW THESE STRICTLY:
+  - NEVER call the same search tool twice for the same topic
+  - ONE search per topic, then evaluate and decide
+  - Maximum 1 overlay per distinct topic mentioned
+  - Wait for search results before calling another tool
+  - BE VERY SELECTIVE - most conversation does NOT need overlays
+
+  DIRECT REQUESTS - ALWAYS OBEY:
+  When the streamer explicitly asks you to search, look up, or find something
+  (e.g., "search for X", "can you find X", "look up X", "show me X"),
+  ALWAYS execute the appropriate search tool immediately. This overrides all other rules.
+  - For video/tutorial requests → search_youtube
+  - For product/tool/docs/general info requests → search_web
+  - For fact-checking requests → analyze_claim
+
+  IGNORE COMPLETELY (never trigger tools for):
+  - Greetings and small talk ("hello", "hi everyone", "how are you")
+  - Status updates ("starting now", "let me share", "one moment", "starting as a host")
+  - Filler words and thinking out loud ("um", "so", "okay", "let me see")
+  - Meta-commentary about the stream ("let me explain", "as I was saying")
+  - Incomplete sentences or fragments
+
+  AUTOMATIC SEARCH TRIGGERS (when NOT a direct request):
+  - search_youtube: When a specific video, tutorial, or channel is mentioned by name
+  - search_web: When streamer mentions or recommends a tool, product, or technology
+  - analyze_claim: For verifiable factual claims with specific data
+    GOOD (trigger): "RAM prices dropped 30%", "Python is 10x faster than JS", "React has 60% market share"
+    BAD (ignore): "Starting as a host", "I think Python is good", "Let me show you something"
+
+  When in doubt about automatic triggers, lean towards searching — it's better to show
+  a useful overlay than to miss an opportunity. The streamer can always dismiss it.
+
+  After ONE search, evaluate relevance, then show_overlay OR move on.
+
+tools:
+  - name: search_youtube
+    description: Search YouTube for a video. Returns video metadata for you to evaluate before deciding to display.
+    parameters:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: Search query based on what the streamer mentioned
+        channel:
+          type: string
+          description: Channel name if specifically mentioned
+
+  - name: search_web
+    description: Search for reference links to show viewers. Use ONLY when streamer recommends a tool, docs, or product (e.g., "check out Tailwind CSS", "use the React docs"). Do NOT use for fact-checking claims.
+    parameters:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: The tool, product, or documentation to search for
+
+  - name: analyze_claim
+    description: Fact-check a claim. YOU must provide your verdict, explanation, confidence, and sources based on your knowledge.
+    parameters:
+      type: object
+      required:
+        - claim
+        - verdict
+        - explanation
+        - confidence
+        - sources
+      properties:
+        claim:
+          type: string
+          description: The factual claim being analyzed
+        verdict:
+          type: string
+          enum:
+            - verified
+            - disputed
+            - partially_true
+            - unverified
+          description: Your assessment - verified (true), disputed (false), partially_true, or unverified
+        explanation:
+          type: string
+          description: Brief 1-2 sentence explanation of why this verdict
+        confidence:
+          type: number
+          description: Your confidence level from 0.0 to 1.0 (e.g., 0.9 for high confidence, 0.5 for uncertain)
+        sources:
+          type: array
+          description: 1-3 relevant sources that support your verdict
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+                description: Name of the source (e.g., "Wikipedia", "MDN Web Docs")
+              url:
+                type: string
+                description: URL to the source
+              relevance:
+                type: string
+                description: Brief note on why this source is relevant
+
+  - name: show_overlay
+    description: Display the search result as an overlay to stream viewers. Call this AFTER a search tool returns relevant results. The overlay will automatically use the data from your last search.
+    parameters:
+      type: object
+      required:
+        - overlay_type
+      properties:
+        overlay_type:
+          type: string
+          enum:
+            - youtube_card
+            - web_search
+            - fact_banner
+            - comparison
+          description: Type of overlay to display (should match your last search type)

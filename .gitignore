@@ -137,3 +137,14 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# pnpm
+.pnpm-store/
+packages/frontend/public/smelter.wasm
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.env.example
