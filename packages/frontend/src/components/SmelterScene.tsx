@@ -1,4 +1,4 @@
-import type { ClientOverlay, DeepAnalysisData, WebSearchData, YoutubeData } from '@streamgenius/shared'
+import type { ClientOverlay, ComparisonData, DeepAnalysisData, WebSearchData, YoutubeData } from '@streamgenius/shared'
 import type { ReactNode } from 'react'
 import { InputStream, Rescaler, Text, View } from '@swmansion/smelter'
 import { useOverlayStore } from '../store/overlays'
@@ -98,6 +98,8 @@ function OverlayCard({ overlay }: { overlay: ClientOverlay }) {
       return <FactBannerOverlay data={overlay.data as DeepAnalysisData} />
     case 'web_search':
       return <WebSearchOverlay data={overlay.data as WebSearchData} />
+    case 'comparison':
+      return <ComparisonOverlay data={overlay.data as ComparisonData} />
   }
 
   return null
@@ -132,6 +134,34 @@ function WebSearchOverlay({ data }: { data: WebSearchData }) {
           <Text style={styles.body}>{result.snippet}</Text>
         </View>
       ))}
+    </CardShell>
+  )
+}
+
+function ComparisonOverlay({ data }: { data: ComparisonData }) {
+  return (
+    <CardShell accentColor="#7C3AED" eyebrow={`${data.itemA.name} vs ${data.itemB.name}`}>
+      <View style={{ direction: 'row', width: 980 }}>
+        <View style={{ width: 482, paddingRight: 16 }}>
+          <Text style={styles.title}>{data.itemA.name}</Text>
+          {data.itemA.pros.map((pro, i) => (
+            <Text key={i} style={{ ...styles.body, color: '#4ADE80' }}>+ {pro}</Text>
+          ))}
+          {data.itemA.cons.map((con, i) => (
+            <Text key={i} style={{ ...styles.body, color: '#F87171' }}>- {con}</Text>
+          ))}
+        </View>
+        <View style={{ width: 482 }}>
+          <Text style={styles.title}>{data.itemB.name}</Text>
+          {data.itemB.pros.map((pro, i) => (
+            <Text key={i} style={{ ...styles.body, color: '#4ADE80' }}>+ {pro}</Text>
+          ))}
+          {data.itemB.cons.map((con, i) => (
+            <Text key={i} style={{ ...styles.body, color: '#F87171' }}>- {con}</Text>
+          ))}
+        </View>
+      </View>
+      <Text style={styles.caption}>{data.summary}</Text>
     </CardShell>
   )
 }
