@@ -89,16 +89,15 @@ export const useOverlayStore = create<OverlayState>((set) => ({
       const now = Date.now()
       const lastMsg = state.transcriptMessages[state.transcriptMessages.length - 1]
 
-      // Update last message if same speaker and within time window
+      // Same speaker within time window - just replace with new text
+      // (Gemini should send accumulated/complete text each time)
       if (lastMsg && lastMsg.speaker === speaker && now - lastMsg.timestamp < ACCUMULATE_WINDOW_MS) {
-        // Intelligently merge the text
-        const mergedText = mergeText(lastMsg.text, message)
         return {
           transcript: text,
           transcriptFinal: isFinal,
           transcriptMessages: [
             ...state.transcriptMessages.slice(0, -1),
-            { ...lastMsg, text: mergedText, timestamp: now, isFinal },
+            { ...lastMsg, text: message, timestamp: now, isFinal },
           ],
         }
       }
