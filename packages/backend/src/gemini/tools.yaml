@@ -99,4 +99,5 @@ tools:
             - youtube_card
             - web_search
             - fact_banner
+            - comparison
           description: Type of overlay to display (should match your last search type)

@@ -14,6 +14,7 @@ export interface TextInputMessage {
 export interface OverlayApproveMessage {
   kind: 'overlay_approve'
   id: string
+  overlayType: import('./overlay.js').OverlayType
 }
 
 export interface OverlayDismissMessage {

@@ -13,7 +13,7 @@ export function OverlayQueue() {
 
   const handleApprove = (overlay: ClientOverlay) => {
     updateOverlayStatus(overlay.id, 'approved')
-    sendMessage({ kind: 'overlay_approve', id: overlay.id })
+    sendMessage({ kind: 'overlay_approve', id: overlay.id, overlayType: overlay.type })
   }
 
   const handleDismiss = (overlay: ClientOverlay) => {
