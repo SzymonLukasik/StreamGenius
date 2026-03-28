@@ -4,89 +4,111 @@ interface Props {
   data: DeepAnalysisData
 }
 
-const verdictColors: Record<DeepAnalysisData['verdict'], { bg: string; badge: string }> = {
-  verified: { bg: 'rgba(34, 197, 94, 0.95)', badge: '#166534' },
-  disputed: { bg: 'rgba(239, 68, 68, 0.95)', badge: '#991b1b' },
-  partially_true: { bg: 'rgba(234, 179, 8, 0.95)', badge: '#854d0e' },
-  unverified: { bg: 'rgba(107, 114, 128, 0.95)', badge: '#374151' },
-}
+const FONT = '"Inter", "Roboto", -apple-system, BlinkMacSystemFont, sans-serif'
 
-const verdictLabels: Record<DeepAnalysisData['verdict'], string> = {
-  verified: 'Verified',
-  disputed: 'Disputed',
-  partially_true: 'Partially True',
-  unverified: 'Unverified',
+const verdictConfig: Record<
+  DeepAnalysisData['verdict'],
+  { label: string; accent: string; badgeBg: string; badgeText: string }
+> = {
+  verified:       { label: 'Verified',       accent: '#34A853', badgeBg: 'rgba(52,168,83,0.15)',   badgeText: '#34A853' },
+  disputed:       { label: 'Disputed',       accent: '#EA4335', badgeBg: 'rgba(234,67,53,0.15)',   badgeText: '#EA4335' },
+  partially_true: { label: 'Partially True', accent: '#FBBC04', badgeBg: 'rgba(251,188,4,0.15)',   badgeText: '#FBBC04' },
+  unverified:     { label: 'Unverified',     accent: '#9aa0a6', badgeBg: 'rgba(154,160,166,0.15)', badgeText: '#9aa0a6' },
 }
 
 export function FactBannerOverlay({ data }: Props) {
-  const colors = verdictColors[data.verdict]
+  const config = verdictConfig[data.verdict]
 
   return (
     <div
       style={{
         position: 'absolute',
-        bottom: '60px',
+        bottom: '48px',
         left: '40px',
         right: '40px',
-        backgroundColor: colors.bg,
-        borderRadius: '12px',
-        padding: '16px 20px',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+        backgroundColor: 'rgba(10, 10, 16, 0.88)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRadius: '10px',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255,255,255,0.04) inset',
+        fontFamily: FONT,
+        overflow: 'hidden',
       }}
     >
+      {/* Verdict-colored accent bar */}
       <div
         style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          bottom: 0,
+          width: '3px',
+          backgroundColor: config.accent,
+        }}
+      />
+
+      <div
+        style={{
+          padding: '14px 18px 14px 22px',
           display: 'flex',
           alignItems: 'flex-start',
-          gap: '12px',
+          gap: '14px',
         }}
       >
+        {/* Verdict badge */}
         <div
           style={{
-            backgroundColor: colors.badge,
-            borderRadius: '4px',
-            padding: '4px 8px',
-            fontSize: '11px',
-            fontWeight: 600,
-            color: '#ffffff',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
             flexShrink: 0,
+            marginTop: '2px',
+            backgroundColor: config.badgeBg,
+            border: `1px solid ${config.accent}44`,
+            borderRadius: '5px',
+            padding: '4px 9px',
           }}
         >
-          {verdictLabels[data.verdict]}
+          <span
+            style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              color: config.badgeText,
+              textTransform: 'uppercase',
+              letterSpacing: '0.6px',
+            }}
+          >
+            {config.label}
+          </span>
         </div>
-        <div style={{ flex: 1 }}>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Claim */}
           <p
             style={{
-              margin: '0 0 8px 0',
-              fontSize: '16px',
+              margin: '0 0 6px 0',
+              fontSize: '15px',
               fontWeight: 500,
-              color: '#ffffff',
-              lineHeight: 1.4,
+              color: '#f0f0f5',
+              lineHeight: 1.45,
             }}
           >
             {data.claim}
           </p>
+
+          {/* Explanation */}
           <p
             style={{
-              margin: '0 0 12px 0',
-              fontSize: '14px',
-              color: 'rgba(255, 255, 255, 0.9)',
-              lineHeight: 1.4,
+              margin: '0 0 10px 0',
+              fontSize: '13px',
+              color: 'rgba(255, 255, 255, 0.6)',
+              lineHeight: 1.45,
             }}
           >
             {data.explanation}
           </p>
+
+          {/* Sources */}
           {data.sources.length > 0 && (
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '8px',
-              }}
-            >
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {data.sources.map((source, i) => (
                 <a
                   key={i}
@@ -94,9 +116,13 @@ export function FactBannerOverlay({ data }: Props) {
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
-                    fontSize: '12px',
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    textDecoration: 'underline',
+                    fontSize: '11px',
+                    color: 'rgba(66, 133, 244, 0.8)',
+                    textDecoration: 'none',
+                    backgroundColor: 'rgba(66,133,244,0.08)',
+                    border: '1px solid rgba(66,133,244,0.2)',
+                    borderRadius: '4px',
+                    padding: '2px 7px',
                   }}
                 >
                   {source.title}
@@ -104,6 +130,22 @@ export function FactBannerOverlay({ data }: Props) {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Confidence badge */}
+        <div
+          style={{
+            flexShrink: 0,
+            alignSelf: 'center',
+            backgroundColor: `${config.accent}18`,
+            border: `1px solid ${config.accent}33`,
+            borderRadius: '20px',
+            padding: '3px 10px',
+          }}
+        >
+          <span style={{ fontSize: '11px', fontWeight: 600, color: config.accent }}>
+            {Math.round(data.confidence * 100)}%
+          </span>
         </div>
       </div>
     </div>

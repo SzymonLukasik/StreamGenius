@@ -35,10 +35,17 @@ export const webSearchDataSchema = z.object({
   ),
 })
 
+export const comparisonDataSchema = z.object({
+  itemA: z.object({ name: z.string(), pros: z.array(z.string()), cons: z.array(z.string()) }),
+  itemB: z.object({ name: z.string(), pros: z.array(z.string()), cons: z.array(z.string()) }),
+  summary: z.string(),
+})
+
 export const overlayTypeSchema = z.enum([
   'youtube_card',
   'fact_banner',
   'web_search',
+  'comparison',
 ])
 
 export const overlayStatusSchema = z.enum(['fetching', 'ready', 'error'])
@@ -47,6 +54,7 @@ export const overlayDataSchema = z.union([
   youtubeDataSchema,
   deepAnalysisDataSchema,
   webSearchDataSchema,
+  comparisonDataSchema,
   z.null(),
 ])
 
