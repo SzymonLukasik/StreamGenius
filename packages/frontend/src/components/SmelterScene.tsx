@@ -1,5 +1,4 @@
 import type { ClientOverlay, ComparisonData, DeepAnalysisData, WebSearchData, YoutubeData } from '@streamgenius/shared'
-import type { ReactNode } from 'react'
 import { InputStream, Rescaler, Text, View } from '@swmansion/smelter'
 import { useOverlayStore } from '../store/overlays'
 
@@ -33,89 +32,17 @@ export function SmelterScene() {
         <InputStream inputId={SMELTER_CAMERA_INPUT_ID} />
       </Rescaler>
 
-      <View
-        style={{
-          top: 80,
-          left: 40,
-          width: 1080,
-          direction: 'column',
-        }}
-      >
-        {activeOverlays.map((overlay) => (
-          <View
-            key={overlay.id}
-            id={`overlay-${overlay.id}`}
-            style={{ paddingTop: 16 }}
-            transition={{ durationMs: 240, easingFunction: 'linear' }}
-          >
-            <OverlayCard overlay={overlay} />
-          </View>
-        ))}
-      </View>
+      {activeOverlays.map((overlay) => (
+        <OverlayCard key={overlay.id} overlay={overlay} />
+      ))}
 
-      <View
-        style={{
-          top: 20,
-          left: 20,
-          width: 200,
-          height: 48,
-          backgroundColor: '#000000D0',
-          borderRadius: 8,
-          paddingLeft: 12,
-          paddingTop: 8,
-          borderWidth: 1,
-          borderColor: '#FFFFFF1F',
-          direction: 'row',
-        }}
-      >
-        <View
-          style={{
-            width: 44,
-            height: 24,
-            backgroundColor: '#DC2626',
-            borderRadius: 4,
-            paddingLeft: 8,
-            paddingTop: 4,
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 12,
-              lineHeight: 16,
-              color: '#FFFFFF',
-              fontWeight: 'bold',
-              fontFamily: 'Inter',
-            }}
-          >
-            LIVE
-          </Text>
-        </View>
 
-        <View style={{ width: 10, height: 1 }} />
 
-        <View style={{ width: 130, height: 36, direction: 'column' }}>
-          <Text
-            style={{
-              fontSize: 14,
-              color: '#F8FAFC',
-              fontWeight: 'bold',
-              fontFamily: 'Inter',
-            }}
-          >
-            StreamGenius Live
-          </Text>
-          <Text
-            style={{
-              fontSize: 10,
-              color: '#CBD5E1',
-              fontWeight: 'medium',
-              fontFamily: 'Inter',
-            }}
-          >
-            Composed by Smelter
-          </Text>
-        </View>
-      </View>
+
+
+
+
+
     </View>
   )
 }
@@ -125,223 +52,287 @@ function OverlayCard({ overlay }: { overlay: ClientOverlay }) {
 
   switch (overlay.type) {
     case 'youtube_card':
-      return <YoutubeOverlay data={overlay.data as YoutubeData} />
+      return <YoutubeOverlay id={overlay.id} data={overlay.data as YoutubeData} />
     case 'fact_banner':
-      return <FactBannerOverlay data={overlay.data as DeepAnalysisData} />
+      return <FactBannerOverlay id={overlay.id} data={overlay.data as DeepAnalysisData} />
     case 'web_search':
-      return <WebSearchOverlay data={overlay.data as WebSearchData} />
+      return <WebSearchOverlay id={overlay.id} data={overlay.data as WebSearchData} />
     case 'comparison':
-      return <ComparisonOverlay data={overlay.data as ComparisonData} />
+      return <ComparisonOverlay id={overlay.id} data={overlay.data as ComparisonData} />
   }
 
   return null
 }
 
-function YoutubeOverlay({ data }: { data: YoutubeData }) {
-  return (
-    <CardShell accentColor="#DC2626" eyebrow="YouTube">
-      <Text style={styles.title}>{data.title}</Text>
-      <Text style={styles.body}>{formatYoutubeMeta(data)}</Text>
-      <Text style={styles.caption}>{formatPublishedDate(data.publishedAt)}</Text>
-    </CardShell>
-  )
-}
-
-function FactBannerOverlay({ data }: { data: DeepAnalysisData }) {
-  return (
-    <CardShell accentColor={getVerdictColor(data.verdict)} eyebrow={`Fact check - ${formatVerdict(data.verdict)}`}>
-      <Text style={styles.title}>{data.claim}</Text>
-      <Text style={styles.body}>{data.explanation}</Text>
-      <Text style={styles.caption}>Confidence {Math.round(data.confidence * 100)}%</Text>
-    </CardShell>
-  )
-}
-
-function WebSearchOverlay({ data }: { data: WebSearchData }) {
-  return (
-    <CardShell accentColor="#2563EB" eyebrow={`Search - ${data.query}`}>
-      {data.results.slice(0, 2).map((result, index) => (
-        <View key={`${result.link}-${index}`} style={{ paddingBottom: index === 1 ? 0 : 12, direction: 'column' }}>
-          <Text style={styles.resultTitle}>{result.title}</Text>
-          <Text style={styles.body}>{result.snippet.length > 100 ? result.snippet.slice(0, 100) + '…' : result.snippet}</Text>
-        </View>
-      ))}
-    </CardShell>
-  )
-}
-
-function ComparisonOverlay({ data }: { data: ComparisonData }) {
-  return (
-    <CardShell accentColor="#7C3AED" eyebrow={`${data.itemA.name} vs ${data.itemB.name}`}>
-      <View style={{ direction: 'row', width: 980 }}>
-        <View style={{ width: 482, paddingRight: 16, direction: 'column' }}>
-          <Text style={styles.colTitle}>{data.itemA.name}</Text>
-          {data.itemA.pros.map((pro, i) => (
-            <Text key={i} style={{ ...styles.colBody, color: '#4ADE80' }}>+ {pro}</Text>
-          ))}
-          {data.itemA.cons.map((con, i) => (
-            <Text key={i} style={{ ...styles.colBody, color: '#F87171' }}>- {con}</Text>
-          ))}
-        </View>
-        <View style={{ width: 482, direction: 'column' }}>
-          <Text style={styles.colTitle}>{data.itemB.name}</Text>
-          {data.itemB.pros.map((pro, i) => (
-            <Text key={i} style={{ ...styles.colBody, color: '#4ADE80' }}>+ {pro}</Text>
-          ))}
-          {data.itemB.cons.map((con, i) => (
-            <Text key={i} style={{ ...styles.colBody, color: '#F87171' }}>- {con}</Text>
-          ))}
-        </View>
-      </View>
-      <Text style={styles.caption}>{data.summary}</Text>
-    </CardShell>
-  )
-}
-
-function CardShell({
-  accentColor,
-  eyebrow,
-  children,
-}: {
-  accentColor: string
-  eyebrow: string
-  children: ReactNode
-}) {
+function YoutubeOverlay({ id, data }: { id: string; data: YoutubeData }) {
   return (
     <View
+      id={`overlay-${id}`}
       style={{
-        width: 1080,
-        backgroundColor: '#08111FD0',
-        borderRadius: 20,
+        width: 300,
+        bottom: 60,
+        right: 40,
+        backgroundColor: '#0A0A10E6',
+        borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#FFFFFF1A',
-        paddingLeft: 22,
-        paddingRight: 22,
-        paddingTop: 18,
-        paddingBottom: 18,
+        borderColor: '#FFFFFF14',
         direction: 'column',
-        boxShadow: [
-          {
-            offsetY: 18,
-            blurRadius: 36,
-            color: '#02061788',
-          },
-        ],
       }}
     >
-      <View
-        style={{
-          width: 600,
-          height: 30,
-          backgroundColor: accentColor,
-          borderRadius: 15,
-          paddingLeft: 10,
-          paddingRight: 10,
-          paddingTop: 5,
-          paddingBottom: 5,
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 14,
-            color: '#F8FAFC',
-            fontWeight: 'bold',
-            align: 'center',
-          }}
-        >
-          {eyebrow}
-        </Text>
+      <View style={{ height: 3, width: 300, backgroundColor: '#FF0000' }} />
+
+      <View style={{ height: 162, width: 300, backgroundColor: '#1A1A24', direction: 'column' }}>
+        <View style={{ paddingLeft: 10, paddingTop: 10, direction: 'row', height: 40 }}>
+          <View style={{ backgroundColor: '#000000B8', borderRadius: 4, paddingLeft: 8, paddingRight: 8, paddingTop: 3, paddingBottom: 3, direction: 'row', height: 20 }}>
+            <View style={{ paddingTop: 4, direction: 'column' }}><View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF0000' }} /></View>
+            <View style={{ width: 5 }} />
+            <Text style={{ fontFamily: 'Inter', fontSize: 10, fontWeight: 'bold' as const, color: '#E6E6E6' }}>MENTIONED</Text>
+          </View>
+        </View>
+        <View style={{ height: 30 }} />
+        <View style={{ width: 300, direction: 'column' }}>
+          <Text style={{ fontFamily: 'Inter', fontSize: 13, color: '#FFFFFF4D', align: 'center' }}>Screenshot placeholder</Text>
+        </View>
       </View>
 
-      <View style={{ paddingTop: 14, direction: 'column' }}>{children}</View>
+      <View style={{ paddingTop: 12, paddingLeft: 14, paddingRight: 14, paddingBottom: 14, direction: 'column' }}>
+        <Text style={styles.youtubeTitle}>{data.title}</Text>
+        <View style={{ height: 6 }} />
+        <Text style={styles.youtubeSubtitle}>{data.channelName}</Text>
+        <View style={{ height: 10 }} />
+        <View style={{ direction: 'row' }}>
+          <StatPill value={formatCompactNumber(data.viewCount)} label="views" />
+          <View style={{ width: 14 }} />
+          <StatPill value={formatCompactNumber(data.likeCount)} label="likes" />
+        </View>
+      </View>
+    </View>
+  )
+}
+
+function StatPill({ value, label }: { value: string; label: string }) {
+  return (
+    <View style={{ backgroundColor: '#FFFFFF0D', borderRadius: 6, paddingLeft: 8, paddingRight: 8, paddingTop: 4, paddingBottom: 4, direction: 'row' }}>
+      <Text style={{ fontFamily: 'Inter', fontSize: 11, fontWeight: 'bold' as const, color: '#BFFFFF' }}>{value}</Text>
+      <View style={{ width: 4 }} />
+      <Text style={{ fontFamily: 'Inter', fontSize: 10, color: '#FFFFFF4D' }}>{label}</Text>
+    </View>
+  )
+}
+
+function FactBannerOverlay({ id, data }: { id: string; data: DeepAnalysisData }) {
+  const config = verdictConfig[data.verdict]
+  return (
+    <View
+      id={`overlay-${id}`}
+      style={{
+        width: 1200,
+        left: 40,
+        bottom: 48,
+        backgroundColor: '#0A0A10E0',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#FFFFFF14',
+        direction: 'row',
+      }}
+    >
+      <View style={{ width: 3, backgroundColor: config.accent }} />
+
+      <View style={{ direction: 'row', paddingTop: 14, paddingBottom: 14, paddingLeft: 18, paddingRight: 22, width: 1197 }}>
+        <View style={{ width: 110, direction: 'row' }}>
+          <View style={{ backgroundColor: config.badgeBg, borderWidth: 1, borderColor: config.accent + '44', borderRadius: 5, paddingLeft: 9, paddingRight: 9, paddingTop: 4, paddingBottom: 4, direction: 'column', height: 26 }}>
+            <Text style={{ fontSize: 10, color: config.badgeText, fontWeight: 'bold' as const, fontFamily: 'Inter' }}>{config.label}</Text>
+          </View>
+        </View>
+
+        <View style={{ width: 14 }} />
+
+        <View style={{ width: 893, direction: 'column' }}>
+          <Text style={styles.claim}>{data.claim}</Text>
+          <View style={{ height: 6 }} />
+          <Text style={styles.explanation}>{data.explanation}</Text>
+        </View>
+
+        <View style={{ width: 14 }} />
+
+        <View style={{ direction: 'column', width: 66, paddingTop: 4 }}>
+          <View style={{ backgroundColor: config.accent + '18', borderWidth: 1, borderColor: config.accent + '33', borderRadius: 20, paddingLeft: 10, paddingRight: 10, paddingTop: 3, paddingBottom: 3, direction: 'column' }}>
+            <Text style={{ fontSize: 11, fontWeight: 'bold' as const, color: config.accent, fontFamily: 'Inter', align: 'center' }}>{Math.round(data.confidence * 100)}%</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  )
+}
+
+function WebSearchOverlay({ id, data }: { id: string; data: WebSearchData }) {
+  return (
+    <View
+      id={`overlay-${id}`}
+      style={{
+        width: 310,
+        right: 40,
+        top: 60,
+        backgroundColor: '#0A0A10E6',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#FFFFFF14',
+        direction: 'column',
+      }}
+    >
+      <View style={{ height: 3, width: 310, backgroundColor: '#4285F4' }} />
+
+      <View style={{ paddingTop: 12, paddingBottom: 10, paddingLeft: 14, paddingRight: 14, borderWidth: 1, borderColor: '#FFFFFF0F', direction: 'row' }}>
+        <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: 'medium' as const, color: '#FFFFFF8C' }}>{data.query}</Text>
+      </View>
+
+      <View style={{ paddingTop: 10, paddingLeft: 14, paddingRight: 14, paddingBottom: 14, direction: 'column' }}>
+        {data.results.slice(0, 3).map((result, i) => (
+          <View key={i} style={{ direction: 'column' }}>
+            <View style={{ backgroundColor: '#FFFFFF0A', borderWidth: 1, borderColor: '#FFFFFF0F', borderRadius: 8, paddingLeft: 12, paddingRight: 12, paddingTop: 10, paddingBottom: 10, direction: 'column' }}>
+              <Text style={styles.webSearchTitle}>{result.title}</Text>
+              <View style={{ height: 3 }} />
+              <Text style={styles.webSearchLink}>{result.link}</Text>
+              <View style={{ height: 4 }} />
+              <Text style={styles.webSearchSnippet}>{result.snippet}</Text>
+            </View>
+            {i !== 2 && <View style={{ height: 8 }} />}
+          </View>
+        ))}
+      </View>
+    </View>
+  )
+}
+
+function ComparisonOverlay({ id, data }: { id: string; data: ComparisonData }) {
+  return (
+    <View
+      id={`overlay-${id}`}
+      style={{
+        width: 600,
+        right: 40,
+        top: 60,
+        backgroundColor: '#0A0A10E6',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#FFFFFF14',
+        direction: 'column',
+      }}
+    >
+      <View style={{ height: 3, width: 600, backgroundColor: '#A855F7' }} />
+
+      <View style={{ paddingTop: 12, paddingLeft: 16, paddingRight: 16, paddingBottom: 12, direction: 'row', width: 600 }}>
+        <View style={{ width: 276, direction: 'column', paddingRight: 8 }}>
+          <Text style={styles.comparisonTitle}>{data.itemA.name}</Text>
+          <View style={{ height: 8 }} />
+          {data.itemA.pros.map((p, i) => (
+            <Text key={`pro-${i}`} style={{ ...styles.comparisonItem, color: '#4ADE80' }}>+ {p}</Text>
+          ))}
+          {data.itemA.cons.map((c, i) => (
+            <Text key={`con-${i}`} style={{ ...styles.comparisonItem, color: '#F87171' }}>- {c}</Text>
+          ))}
+        </View>
+
+        <View style={{ width: 16 }} />
+
+        <View style={{ width: 276, direction: 'column', paddingLeft: 8 }}>
+          <Text style={styles.comparisonTitle}>{data.itemB.name}</Text>
+          <View style={{ height: 8 }} />
+          {data.itemB.pros.map((p, i) => (
+            <Text key={`pro-${i}`} style={{ ...styles.comparisonItem, color: '#4ADE80' }}>+ {p}</Text>
+          ))}
+          {data.itemB.cons.map((c, i) => (
+            <Text key={`con-${i}`} style={{ ...styles.comparisonItem, color: '#F87171' }}>- {c}</Text>
+          ))}
+        </View>
+      </View>
+
+      <View style={{ paddingTop: 12, paddingLeft: 16, paddingRight: 16, paddingBottom: 16, borderWidth: 1, borderColor: '#FFFFFF0F', direction: 'column' }}>
+        <Text style={styles.comparisonItem}>{data.summary}</Text>
+      </View>
     </View>
   )
 }
 
 const styles = {
-  title: {
-    fontSize: 28,
-    color: '#F8FAFC',
-    fontWeight: 'bold' as const,
-    maxWidth: 980,
+  claim: {
+    fontFamily: 'Inter',
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#F0F0F5',
+    fontWeight: 'medium' as const,
     wrap: 'word' as const,
   },
-  body: {
-    fontSize: 18,
+  explanation: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#FFFFFF99',
+    wrap: 'word' as const,
+  },
+  youtubeTitle: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#F0F0F5',
+    fontWeight: 'bold' as const,
+    wrap: 'word' as const,
+  },
+  youtubeSubtitle: {
+    fontFamily: 'Inter',
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#FFFFFF73',
+    wrap: 'word' as const,
+  },
+  webSearchTitle: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    lineHeight: 18,
+    color: '#4285F4',
+    fontWeight: 'bold' as const,
+    wrap: 'word' as const,
+  },
+  webSearchLink: {
+    fontFamily: 'Inter',
+    fontSize: 10,
+    lineHeight: 14,
+    color: '#34A853B3',
+    wrap: 'word' as const,
+  },
+  webSearchSnippet: {
+    fontFamily: 'Inter',
+    fontSize: 11,
+    lineHeight: 16,
+    color: '#FFFFFF73',
+    wrap: 'word' as const,
+  },
+  comparisonTitle: {
+    fontFamily: 'Inter',
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#F0F0F5',
+    fontWeight: 'bold' as const,
+    wrap: 'word' as const,
+  },
+  comparisonItem: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    lineHeight: 18,
     color: '#D6E0EA',
-    maxWidth: 980,
     wrap: 'word' as const,
   },
-  caption: {
-    fontSize: 14,
-    color: '#94A3B8',
-    maxWidth: 980,
-    wrap: 'word' as const,
-  },
-  resultTitle: {
-    fontSize: 20,
-    color: '#E2E8F0',
-    fontWeight: 'bold' as const,
-    maxWidth: 980,
-    wrap: 'word' as const,
-  },
-  colTitle: {
-    fontSize: 28,
-    color: '#F8FAFC',
-    fontWeight: 'bold' as const,
-    maxWidth: 460,
-    wrap: 'word' as const,
-  },
-  colBody: {
-    fontSize: 18,
-    color: '#D6E0EA',
-    maxWidth: 460,
-    wrap: 'word' as const,
-  },
+}
+
+const verdictConfig: Record<DeepAnalysisData['verdict'], { label: string; accent: string; badgeBg: string; badgeText: string }> = {
+  verified: { label: 'VERIFIED', accent: '#34A853', badgeBg: '#34A85326', badgeText: '#34A853' },
+  disputed: { label: 'DISPUTED', accent: '#EA4335', badgeBg: '#EA433526', badgeText: '#EA4335' },
+  partially_true: { label: 'PARTIALLY TRUE', accent: '#FBBC04', badgeBg: '#FBBC0426', badgeText: '#FBBC04' },
+  unverified: { label: 'UNVERIFIED', accent: '#9AA0A6', badgeBg: '#9AA0A626', badgeText: '#9AA0A6' },
 }
 
 function formatCompactNumber(value: number): string {
-  return new Intl.NumberFormat('en', {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  }).format(value)
-}
-
-function formatYoutubeMeta(data: YoutubeData): string {
-  return [
-    data.channelName,
-    `${formatCompactNumber(data.viewCount)} views`,
-    `${formatCompactNumber(data.likeCount)} likes`,
-  ].join(' - ')
-}
-
-function formatPublishedDate(value: string): string {
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return new Intl.DateTimeFormat('en', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date)
-}
-
-function getVerdictColor(verdict: DeepAnalysisData['verdict']): string {
-  switch (verdict) {
-    case 'verified':
-      return '#16A34A'
-    case 'disputed':
-      return '#DC2626'
-    case 'partially_true':
-      return '#D97706'
-    case 'unverified':
-      return '#475569'
-  }
-}
-
-function formatVerdict(verdict: DeepAnalysisData['verdict']): string {
-  return verdict.replace('_', ' ')
+  if (value >= 1_000_000) return (value / 1_000_000).toFixed(1) + 'M'
+  if (value >= 1_000) return (value / 1_000).toFixed(1) + 'K'
+  return value.toString()
 }

@@ -18,7 +18,17 @@
       "Bash(unzip -o inter.zip \"Inter Desktop/Inter-Regular.ttf\" \"Inter Desktop/Inter-Bold.ttf\" \"Inter Desktop/Inter-Medium.ttf\")",
       "Bash(unzip -l /tmp/inter.zip)",
       "Bash(unzip -p /tmp/inter.zip \"InterVariable.ttf\")",
-      "Bash(\"C:/Users/juras/OneDrive/Dokumenty/streamGenius/StreamGenius/packages/frontend/public/Inter.ttf\")"
+      "Bash(\"C:/Users/juras/OneDrive/Dokumenty/streamGenius/StreamGenius/packages/frontend/public/Inter.ttf\")",
+      "Bash(find C:/Users/juras/OneDrive/Dokumenty/streamGenius/StreamGenius/node_modules/.pnpm -type f -name *.md)",
+      "Bash(find C:/Users/juras/OneDrive/Dokumenty/streamGenius/StreamGenius/node_modules/.pnpm/@swmansion+smelter@0.3.0 -type f \\\\\\(-name *.tsx -o -name *.jsx \\\\\\))",
+      "Bash(find C:/Users/juras/OneDrive/Dokumenty/streamGenius/StreamGenius -path */node_modules -prune -o -type f -name *.md -print)",
+      "Bash(find C:/Users/juras/OneDrive/Dokumenty/streamGenius/StreamGenius -path */node_modules -prune -o -type f \\\\\\(-name *.tsx -o -name *.ts \\\\\\) -print)",
+      "Bash(find C:/Users/juras/OneDrive/Dokumenty/streamGenius/StreamGenius/packages -type f -name *.md)",
+      "WebFetch(domain:smelter.dev)",
+      "WebSearch",
+      "WebFetch(domain:www.smelter.dev)",
+      "Bash(find C:/Users/juras/OneDrive/Dokumenty/streamGenius/StreamGenius/node_modules/.pnpm/@swmansion+smelter-web-wasm@0.3.0_@swmansion+smelter@0.3.0_react@18.3.1/node_modules/@swmansion/smelter-web-wasm/ -type f -name *.d.ts -o -name *.json -o -name *.md)",
+      "Bash(find C:/Users/juras/OneDrive/Dokumenty/streamGenius/StreamGenius/node_modules/.pnpm/@swmansion+smelter@0.3.0/node_modules/@swmansion/smelter/ -type f \\\\\\(-name *.d.ts -o -name README* \\\\\\))"
     ]
   }
 }
