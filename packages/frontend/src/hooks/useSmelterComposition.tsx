@@ -49,6 +49,7 @@ export function useSmelterComposition(): UseSmelterCompositionResult {
 
       try {
         await smelter.init()
+        await smelter.registerFont('/Inter.ttf')
         await smelter.registerInput(SMELTER_CAMERA_INPUT_ID, {
           type: 'stream',
           stream: cameraStream,

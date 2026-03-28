@@ -57,12 +57,13 @@ export function SmelterScene() {
         style={{
           top: 20,
           right: 20,
-          backgroundColor: '#000000B8',
+          backgroundColor: '#000000B0',
           borderRadius: 12,
           paddingHorizontal: 14,
           paddingVertical: 10,
           borderWidth: 1,
           borderColor: '#FFFFFF1F',
+          direction: 'column',
         }}
       >
         <Text
@@ -129,7 +130,7 @@ function WebSearchOverlay({ data }: { data: WebSearchData }) {
   return (
     <CardShell accentColor="#2563EB" eyebrow={`Search - ${data.query}`}>
       {data.results.slice(0, 2).map((result, index) => (
-        <View key={`${result.link}-${index}`} style={{ paddingBottom: index === 1 ? 0 : 12 }}>
+        <View key={`${result.link}-${index}`} style={{ paddingBottom: index === 1 ? 0 : 12, direction: 'column' }}>
           <Text style={styles.resultTitle}>{result.title}</Text>
           <Text style={styles.body}>{result.snippet.length > 100 ? result.snippet.slice(0, 100) + '…' : result.snippet}</Text>
         </View>
@@ -142,7 +143,7 @@ function ComparisonOverlay({ data }: { data: ComparisonData }) {
   return (
     <CardShell accentColor="#7C3AED" eyebrow={`${data.itemA.name} vs ${data.itemB.name}`}>
       <View style={{ direction: 'row', width: 980 }}>
-        <View style={{ width: 482, paddingRight: 16 }}>
+        <View style={{ width: 482, paddingRight: 16, direction: 'column' }}>
           <Text style={styles.colTitle}>{data.itemA.name}</Text>
           {data.itemA.pros.map((pro, i) => (
             <Text key={i} style={{ ...styles.colBody, color: '#4ADE80' }}>+ {pro}</Text>
@@ -151,7 +152,7 @@ function ComparisonOverlay({ data }: { data: ComparisonData }) {
             <Text key={i} style={{ ...styles.colBody, color: '#F87171' }}>- {con}</Text>
           ))}
         </View>
-        <View style={{ width: 482 }}>
+        <View style={{ width: 482, direction: 'column' }}>
           <Text style={styles.colTitle}>{data.itemB.name}</Text>
           {data.itemB.pros.map((pro, i) => (
             <Text key={i} style={{ ...styles.colBody, color: '#4ADE80' }}>+ {pro}</Text>
@@ -179,12 +180,13 @@ function CardShell({
     <View
       style={{
         width: 1080,
-        backgroundColor: '#08111FEE',
+        backgroundColor: '#08111FD0',
         borderRadius: 20,
         borderWidth: 1,
         borderColor: '#FFFFFF1A',
         paddingHorizontal: 22,
         paddingVertical: 18,
+        direction: 'column',
         boxShadow: [
           {
             offsetY: 18,
@@ -197,10 +199,11 @@ function CardShell({
       <View
         style={{
           width: 600,
+          height: 30,
           backgroundColor: accentColor,
-          borderRadius: 999,
+          borderRadius: 15,
           paddingHorizontal: 10,
-          paddingVertical: 6,
+          paddingVertical: 5,
         }}
       >
         <Text
@@ -215,7 +218,7 @@ function CardShell({
         </Text>
       </View>
 
-      <View style={{ paddingTop: 14 }}>{children}</View>
+      <View style={{ paddingTop: 14, direction: 'column' }}>{children}</View>
     </View>
   )
 }
