@@ -7,7 +7,8 @@ import { ToolExecutor } from './tool-executor.js'
 import { toolDefinitions, systemPrompt } from './tool-definitions.js'
 
 const GEMINI_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025'
-const TOOL_CALL_DEBOUNCE_MS = 5000
+const TOOL_CALL_DEBOUNCE_MS = 500
+const TRANSCRIPT_FINALIZE_DELAY_MS = 2000
 
 export interface GeminiLiveSessionOptions {
   onTranscript: (text: string, isFinal: boolean, speakerId?: string) => void
@@ -93,6 +94,40 @@ export async function createGeminiLiveSession(
     return speakerMap.get(lastActiveSpeaker)?.name
   }
 
+  // Only send final transcripts to frontend - no intermediate updates
+  // Gemini sends accumulated text, we just wait for finished=true
+  let transcriptBuffer = ''
+  let finalizeTimer: NodeJS.Timeout | null = null
+
+  const flushTranscript = () => {
+    const text = transcriptBuffer.trim()
+    if (text) {
+      console.log(`[Transcript] Final: "${text}"`)
+      onTranscript(text, true, getSpeakerName())
+    }
+    transcriptBuffer = ''
+    finalizeTimer = null
+  }
+
+  const handleInputTranscription = (text: string, finished: boolean) => {
+    // Clear any pending finalize timer
+    if (finalizeTimer) {
+      clearTimeout(finalizeTimer)
+      finalizeTimer = null
+    }
+
+    // Gemini sends deltas - append to buffer (preserve leading space for word boundaries)
+    transcriptBuffer += text
+
+    if (finished) {
+      // Gemini signals transcription is complete - send to frontend
+      flushTranscript()
+    } else {
+      // Fallback: finalize after silence in case Gemini doesn't send finished=true
+      finalizeTimer = setTimeout(flushTranscript, TRANSCRIPT_FINALIZE_DELAY_MS)
+    }
+  }
+
   // Connect to Gemini Live API
   const session = await genAI.live.connect({
     model: GEMINI_MODEL,
@@ -128,7 +163,7 @@ export async function createGeminiLiveSession(
           outputTrack,
           agent,
           (tc) => queueToolCall(session, tc.id, tc.name, tc.args),
-          (text, isFinal) => onTranscript(text, isFinal, getSpeakerName()),
+          handleInputTranscription,
           onReasoning
         )
       },
@@ -183,6 +218,9 @@ export async function createGeminiLiveSession(
       if (toolCallTimer) {
         clearTimeout(toolCallTimer)
       }
+      if (finalizeTimer) {
+        clearTimeout(finalizeTimer)
+      }
       agent.off('trackData', handleTrackData)
       session.close()
     },
@@ -195,18 +233,21 @@ async function handleGeminiMessage(
   outputTrack: AgentTrack,
   agent: FishjamAgent,
   queueToolCall: (tc: { id: string; name: string; args: Record<string, unknown> }) => void,
-  onTranscript: (text: string, isFinal: boolean) => void,
+  handleInputTranscription: (text: string, finished: boolean) => void,
   onReasoning: (text: string) => void
 ) {
   const serverContent = message.serverContent
 
   // Handle input audio transcription (what the user said)
+  // Gemini Transcription type: { text?: string, finished?: boolean }
   const inputTranscription = (serverContent as Record<string, unknown>)?.inputTranscription as
-    | { text?: string }
+    | { text?: string; finished?: boolean }
     | undefined
+  if (inputTranscription) {
+    console.log('[Gemini] inputTranscription:', JSON.stringify(inputTranscription))
+  }
   if (inputTranscription?.text) {
-    // Send immediately for live display
-    onTranscript(inputTranscription.text, true)
+    handleInputTranscription(inputTranscription.text, inputTranscription.finished ?? false)
   }
 
   // Handle output audio transcription (what Gemini is saying)

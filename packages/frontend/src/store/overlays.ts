@@ -89,9 +89,15 @@ export const useOverlayStore = create<OverlayState>((set) => ({
       const now = Date.now()
       const lastMsg = state.transcriptMessages[state.transcriptMessages.length - 1]
 
-      // Same speaker within time window - just replace with new text
-      // (Gemini should send accumulated/complete text each time)
-      if (lastMsg && lastMsg.speaker === speaker && now - lastMsg.timestamp < ACCUMULATE_WINDOW_MS) {
+      // If intermediate update (isFinal=false), update last message from same speaker
+      // This allows live typing effect while speaking
+      if (
+        !isFinal &&
+        lastMsg &&
+        !lastMsg.isFinal &&
+        lastMsg.speaker === speaker &&
+        now - lastMsg.timestamp < ACCUMULATE_WINDOW_MS
+      ) {
         return {
           transcript: text,
           transcriptFinal: isFinal,
@@ -102,7 +108,7 @@ export const useOverlayStore = create<OverlayState>((set) => ({
         }
       }
 
-      // New message (different speaker or too much time passed)
+      // Final message or new speaker - always add as new bubble
       return {
         transcript: text,
         transcriptFinal: isFinal,
