@@ -1,10 +1,19 @@
 import { create } from 'zustand'
 import type { OverlayProposal, ClientOverlay, ClientOverlayStatus } from '@streamgenius/shared'
 
+export interface TranscriptMessage {
+  id: string
+  speaker: string
+  text: string
+  timestamp: number
+  isFinal: boolean
+}
+
 interface OverlayState {
   overlays: ClientOverlay[]
   transcript: string
   transcriptFinal: boolean
+  transcriptMessages: TranscriptMessage[]
   reasoning: string
 
   addOverlay: (proposal: OverlayProposal) => void
@@ -13,12 +22,26 @@ interface OverlayState {
   setTranscript: (text: string, isFinal: boolean) => void
   setReasoning: (text: string) => void
   clearReasoning: () => void
+  clearTranscript: () => void
 }
+
+// Parse speaker from transcript text like "[Speaker 1] Hello world"
+function parseTranscript(text: string): { speaker: string; message: string } {
+  const match = text.match(/^\[([^\]]+)\]\s*(.*)$/)
+  if (match) {
+    return { speaker: match[1], message: match[2] }
+  }
+  return { speaker: 'Unknown', message: text }
+}
+
+// Time window to accumulate messages from same speaker (ms)
+const ACCUMULATE_WINDOW_MS = 10000
 
 export const useOverlayStore = create<OverlayState>((set) => ({
   overlays: [],
   transcript: '',
   transcriptFinal: false,
+  transcriptMessages: [],
   reasoning: '',
 
   addOverlay: (proposal) =>
@@ -55,9 +78,51 @@ export const useOverlayStore = create<OverlayState>((set) => ({
     })),
 
   setTranscript: (text, isFinal) =>
-    set({
-      transcript: text,
-      transcriptFinal: isFinal,
+    set((state) => {
+      const { speaker, message } = parseTranscript(text)
+
+      // Skip empty messages
+      if (!message.trim()) {
+        return { transcript: text, transcriptFinal: isFinal }
+      }
+
+      const now = Date.now()
+      const lastMsg = state.transcriptMessages[state.transcriptMessages.length - 1]
+
+      // If intermediate update (isFinal=false), update last message from same speaker
+      // This allows live typing effect while speaking
+      if (
+        !isFinal &&
+        lastMsg &&
+        !lastMsg.isFinal &&
+        lastMsg.speaker === speaker &&
+        now - lastMsg.timestamp < ACCUMULATE_WINDOW_MS
+      ) {
+        return {
+          transcript: text,
+          transcriptFinal: isFinal,
+          transcriptMessages: [
+            ...state.transcriptMessages.slice(0, -1),
+            { ...lastMsg, text: message, timestamp: now, isFinal },
+          ],
+        }
+      }
+
+      // Final message or new speaker - always add as new bubble
+      return {
+        transcript: text,
+        transcriptFinal: isFinal,
+        transcriptMessages: [
+          ...state.transcriptMessages,
+          {
+            id: `msg-${Date.now()}`,
+            speaker,
+            text: message,
+            timestamp: now,
+            isFinal,
+          },
+        ],
+      }
     }),
 
   setReasoning: (text) =>
@@ -68,5 +133,12 @@ export const useOverlayStore = create<OverlayState>((set) => ({
   clearReasoning: () =>
     set({
       reasoning: '',
+    }),
+
+  clearTranscript: () =>
+    set({
+      transcript: '',
+      transcriptFinal: false,
+      transcriptMessages: [],
     }),
 }))

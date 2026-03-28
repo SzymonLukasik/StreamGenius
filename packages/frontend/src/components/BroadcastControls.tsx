@@ -10,9 +10,11 @@ function BroadcastControlsInner() {
   const {
     state,
     startBroadcast,
-    joinAsGuest,
     stopBroadcast,
     videoStream,
+    isMuted,
+    toggleMute,
+    joinAsGuest,
     compositionReady,
     compositionError,
   } = useFishjamBroadcast()
@@ -223,7 +225,10 @@ function BroadcastControlsInner() {
 
       {state.isConnected && (
         <div style={styles.controls}>
-          <button onClick={() => void handleStopBroadcast()} style={styles.stopButton}>
+          <button onClick={toggleMute} style={isMuted ? styles.muteButtonActive : styles.muteButton}>
+            {isMuted ? 'Unmute' : 'Mute'}
+          </button>
+          <button onClick={handleStopBroadcast} style={styles.stopButton}>
             {mode === 'host' ? 'Stop Broadcast' : 'Leave Room'}
           </button>
         </div>
@@ -307,6 +312,26 @@ const styles: Record<string, React.CSSProperties> = {
   stopButton: {
     padding: '12px 24px',
     backgroundColor: '#ef4444',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  muteButton: {
+    padding: '12px 24px',
+    backgroundColor: '#6b7280',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  muteButtonActive: {
+    padding: '12px 24px',
+    backgroundColor: '#f59e0b',
     color: '#fff',
     border: 'none',
     borderRadius: '8px',

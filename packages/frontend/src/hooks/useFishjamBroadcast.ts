@@ -26,12 +26,16 @@ interface UseFishjamBroadcastResult {
   stopBroadcast: () => Promise<void>
   videoStream: MediaStream | null
   audioStream: MediaStream | null
+  isMuted: boolean
+  toggleMute: () => Promise<void>
   compositionReady: boolean
   compositionError: Error | null
 }
 
 export function useFishjamBroadcast(): UseFishjamBroadcastResult {
   const { joinRoom, leaveRoom, peerStatus } = useConnection()
+  const { startCamera, stopCamera, cameraStream } = useCamera()
+  const { startMicrophone, stopMicrophone, microphoneStream, isMicrophoneMuted, toggleMicrophoneMute } = useMicrophone()
   const { remotePeers } = usePeers()
   const { startMicrophone, stopMicrophone, microphoneStream } = useMicrophone()
   const { setStream: setCustomSourceStream } = useCustomSource(SMELTER_SOURCE_ID)
@@ -172,6 +176,8 @@ export function useFishjamBroadcast(): UseFishjamBroadcastResult {
     stopBroadcast,
     videoStream,
     audioStream: microphoneStream ?? null,
+    isMuted: isMicrophoneMuted,
+    toggleMute: toggleMicrophoneMute,
     compositionReady: isReady,
     compositionError,
   }
