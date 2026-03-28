@@ -128,10 +128,10 @@ function FactBannerOverlay({ data }: { data: DeepAnalysisData }) {
 function WebSearchOverlay({ data }: { data: WebSearchData }) {
   return (
     <CardShell accentColor="#2563EB" eyebrow={`Search - ${data.query}`}>
-      {data.results.slice(0, 3).map((result, index) => (
-        <View key={`${result.link}-${index}`} style={{ paddingBottom: index === 2 ? 0 : 10 }}>
+      {data.results.slice(0, 2).map((result, index) => (
+        <View key={`${result.link}-${index}`} style={{ paddingBottom: index === 1 ? 0 : 12 }}>
           <Text style={styles.resultTitle}>{result.title}</Text>
-          <Text style={styles.body}>{result.snippet}</Text>
+          <Text style={styles.body}>{result.snippet.length > 100 ? result.snippet.slice(0, 100) + '…' : result.snippet}</Text>
         </View>
       ))}
     </CardShell>
@@ -143,21 +143,21 @@ function ComparisonOverlay({ data }: { data: ComparisonData }) {
     <CardShell accentColor="#7C3AED" eyebrow={`${data.itemA.name} vs ${data.itemB.name}`}>
       <View style={{ direction: 'row', width: 980 }}>
         <View style={{ width: 482, paddingRight: 16 }}>
-          <Text style={styles.title}>{data.itemA.name}</Text>
+          <Text style={styles.colTitle}>{data.itemA.name}</Text>
           {data.itemA.pros.map((pro, i) => (
-            <Text key={i} style={{ ...styles.body, color: '#4ADE80' }}>+ {pro}</Text>
+            <Text key={i} style={{ ...styles.colBody, color: '#4ADE80' }}>+ {pro}</Text>
           ))}
           {data.itemA.cons.map((con, i) => (
-            <Text key={i} style={{ ...styles.body, color: '#F87171' }}>- {con}</Text>
+            <Text key={i} style={{ ...styles.colBody, color: '#F87171' }}>- {con}</Text>
           ))}
         </View>
         <View style={{ width: 482 }}>
-          <Text style={styles.title}>{data.itemB.name}</Text>
+          <Text style={styles.colTitle}>{data.itemB.name}</Text>
           {data.itemB.pros.map((pro, i) => (
-            <Text key={i} style={{ ...styles.body, color: '#4ADE80' }}>+ {pro}</Text>
+            <Text key={i} style={{ ...styles.colBody, color: '#4ADE80' }}>+ {pro}</Text>
           ))}
           {data.itemB.cons.map((con, i) => (
-            <Text key={i} style={{ ...styles.body, color: '#F87171' }}>- {con}</Text>
+            <Text key={i} style={{ ...styles.colBody, color: '#F87171' }}>- {con}</Text>
           ))}
         </View>
       </View>
@@ -196,7 +196,7 @@ function CardShell({
     >
       <View
         style={{
-          width: 320,
+          width: 600,
           backgroundColor: accentColor,
           borderRadius: 999,
           paddingHorizontal: 10,
@@ -245,6 +245,19 @@ const styles = {
     color: '#E2E8F0',
     fontWeight: 'bold' as const,
     maxWidth: 980,
+    wrap: 'word' as const,
+  },
+  colTitle: {
+    fontSize: 28,
+    color: '#F8FAFC',
+    fontWeight: 'bold' as const,
+    maxWidth: 460,
+    wrap: 'word' as const,
+  },
+  colBody: {
+    fontSize: 18,
+    color: '#D6E0EA',
+    maxWidth: 460,
     wrap: 'word' as const,
   },
 }
