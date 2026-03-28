@@ -1,6 +1,6 @@
 import type { ClientOverlay, ComparisonData, DeepAnalysisData, WebSearchData, YoutubeData } from '@streamgenius/shared'
 import type { ReactNode } from 'react'
-import { InputStream, Rescaler, Text, View } from '@swmansion/smelter'
+import { Image, InputStream, Rescaler, Text, View } from '@swmansion/smelter'
 import { useOverlayStore } from '../store/overlays'
 
 export const SMELTER_CAMERA_INPUT_ID = 'camera'
