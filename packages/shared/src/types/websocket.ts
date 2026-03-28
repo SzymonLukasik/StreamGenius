@@ -31,6 +31,12 @@ export interface FishjamLeaveMessage {
   roomId: string
 }
 
+export interface FishjamJoinAsGuestMessage {
+  kind: 'fishjam_join_as_guest'
+  roomId: string
+  guestName: string
+}
+
 export type ClientMessage =
   | AudioChunkMessage
   | TextInputMessage
@@ -38,6 +44,7 @@ export type ClientMessage =
   | OverlayDismissMessage
   | FishjamJoinMessage
   | FishjamLeaveMessage
+  | FishjamJoinAsGuestMessage
 
 // Server -> Client messages
 export interface TranscriptMessage {
@@ -70,6 +77,13 @@ export interface FishjamRoomClosedMessage {
   roomId: string
 }
 
+export interface FishjamGuestTokenMessage {
+  kind: 'fishjam_guest_token'
+  roomId: string
+  guestToken: string
+  guestName: string
+}
+
 export interface ReasoningMessage {
   kind: 'reasoning'
   text: string
@@ -82,6 +96,7 @@ export type ServerMessage =
   | SessionStatusMessage
   | FishjamRoomCreatedMessage
   | FishjamRoomClosedMessage
+  | FishjamGuestTokenMessage
   | ReasoningMessage
 
 export type WebSocketMessage = ClientMessage | ServerMessage

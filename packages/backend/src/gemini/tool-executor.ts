@@ -65,7 +65,14 @@ export class ToolExecutor {
           break
 
         case 'analyze_claim':
-          response = await this.handleAnalyzeClaim(args as { claim: string; topic?: string })
+          response = await this.handleAnalyzeClaim(
+            args as {
+              claim: string
+              verdict?: 'verified' | 'disputed' | 'partially_true' | 'unverified'
+              explanation?: string
+              confidence?: number
+            }
+          )
           break
 
         // Display tool - creates overlay for viewers
@@ -143,9 +150,31 @@ export class ToolExecutor {
     return webSearchData
   }
 
-  private async handleAnalyzeClaim(args: { claim: string; topic?: string }) {
+  private async handleAnalyzeClaim(args: {
+    claim: string
+    verdict?: 'verified' | 'disputed' | 'partially_true' | 'unverified'
+    explanation?: string
+    confidence?: number
+  }) {
     console.log(`Analyzing claim: ${args.claim}`)
-    const analysis = await analyzeWithGeminiPro(args.claim, args.topic)
+
+    let analysis
+
+    // If Gemini Live provided verdict/explanation, use that (fallback mode)
+    if (args.verdict && args.explanation) {
+      console.log('Using Gemini Live provided analysis')
+      analysis = {
+        claim: args.claim,
+        verdict: args.verdict,
+        explanation: args.explanation,
+        sources: [],
+        confidence: args.confidence ?? 0.7,
+      }
+    } else {
+      // Try Gemini Pro API for deeper analysis with sources
+      console.log('Calling Gemini API for deep analysis...')
+      analysis = await analyzeWithGeminiPro(args.claim)
+    }
 
     // Cache the result for show_overlay
     this.lastSearchResult = {
@@ -157,11 +186,9 @@ export class ToolExecutor {
     console.log(`Claim analysis:`, JSON.stringify(analysis, null, 2))
 
     return {
-      claim: analysis.claim,
-      verdict: analysis.verdict,
-      explanation: analysis.explanation,
-      sources: analysis.sources,
-      confidence: analysis.confidence,
+      success: true,
+      analysis,
+      message: 'Analysis complete. Call show_overlay with overlay_type fact_banner to display.',
     }
   }
 

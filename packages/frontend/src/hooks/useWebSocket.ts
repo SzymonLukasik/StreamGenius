@@ -9,6 +9,7 @@ const RECONNECT_DELAY = 3000
 interface FishjamCallbacks {
   onRoomCreated?: (roomId: string, streamerToken: string) => void
   onRoomClosed?: (roomId: string) => void
+  onGuestToken?: (roomId: string, guestToken: string, guestName: string) => void
 }
 
 interface WebSocketState {
@@ -105,6 +106,10 @@ function handleServerMessage(message: ServerMessage) {
 
     case 'fishjam_room_closed':
       fishjamCallbacks.onRoomClosed?.(message.roomId)
+      break
+
+    case 'fishjam_guest_token':
+      fishjamCallbacks.onGuestToken?.(message.roomId, message.guestToken, message.guestName)
       break
 
     case 'reasoning':

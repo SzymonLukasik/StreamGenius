@@ -98,6 +98,12 @@ export const fishjamLeaveMessageSchema = z.object({
   roomId: z.string(),
 })
 
+export const fishjamJoinAsGuestMessageSchema = z.object({
+  kind: z.literal('fishjam_join_as_guest'),
+  roomId: z.string(),
+  guestName: z.string(),
+})
+
 export const clientMessageSchema = z.discriminatedUnion('kind', [
   audioChunkMessageSchema,
   textInputMessageSchema,
@@ -105,6 +111,7 @@ export const clientMessageSchema = z.discriminatedUnion('kind', [
   overlayDismissMessageSchema,
   fishjamJoinMessageSchema,
   fishjamLeaveMessageSchema,
+  fishjamJoinAsGuestMessageSchema,
 ])
 
 // Server -> Client message schemas
@@ -138,6 +145,13 @@ export const fishjamRoomClosedMessageSchema = z.object({
   roomId: z.string(),
 })
 
+export const fishjamGuestTokenMessageSchema = z.object({
+  kind: z.literal('fishjam_guest_token'),
+  roomId: z.string(),
+  guestToken: z.string(),
+  guestName: z.string(),
+})
+
 export const reasoningMessageSchema = z.object({
   kind: z.literal('reasoning'),
   text: z.string(),
@@ -150,6 +164,7 @@ export const serverMessageSchema = z.discriminatedUnion('kind', [
   sessionStatusMessageSchema,
   fishjamRoomCreatedMessageSchema,
   fishjamRoomClosedMessageSchema,
+  fishjamGuestTokenMessageSchema,
   reasoningMessageSchema,
 ])
 

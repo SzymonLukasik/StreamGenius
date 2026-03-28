@@ -13,8 +13,16 @@ interface ServerOptions {
 interface ClientConnection {
   id: string
   ws: WebSocket
-  geminiSession: GeminiLiveSession | null
   roomId: string | null
+  role: 'host' | 'guest' | null
+  name: string | null
+}
+
+interface Room {
+  id: string
+  hostConnectionId: string
+  geminiSession: GeminiLiveSession | null
+  participants: Set<string> // connection IDs
 }
 
 export function createServer(options: ServerOptions) {
@@ -30,14 +38,29 @@ export function createServer(options: ServerOptions) {
 
   const wss = new WebSocketServer({ port })
   const clients = new Map<string, ClientConnection>()
+  const rooms = new Map<string, Room>()
+
+  // Broadcast to all participants in a room
+  function broadcastToRoom(roomId: string, message: ServerMessage) {
+    const room = rooms.get(roomId)
+    if (!room) return
+
+    for (const connectionId of room.participants) {
+      const client = clients.get(connectionId)
+      if (client && client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(JSON.stringify(message))
+      }
+    }
+  }
 
   wss.on('connection', (ws) => {
     const clientId = randomUUID()
     const connection: ClientConnection = {
       id: clientId,
       ws,
-      geminiSession: null,
       roomId: null,
+      role: null,
+      name: null,
     }
     clients.set(clientId, connection)
 
@@ -64,27 +87,25 @@ export function createServer(options: ServerOptions) {
 
         switch (message.kind) {
           case 'audio_chunk':
-            // Audio now flows through Fishjam agent -> Gemini Live
-            // This endpoint is kept for backwards compatibility but does nothing
             console.log('Audio chunk received via WebSocket (ignored - use Fishjam)')
             break
           case 'text_input':
-            // Text input can still be used for manual testing
             console.log(`Text input: ${message.text}`)
             break
           case 'overlay_approve':
             console.log(`Overlay approved: ${message.id}`)
-            // TODO: Update overlay state, trigger display
             break
           case 'overlay_dismiss':
             console.log(`Overlay dismissed: ${message.id}`)
-            // TODO: Update overlay state, remove from queue
             break
           case 'fishjam_join':
             await handleFishjamJoin(connection, message.streamerId)
             break
           case 'fishjam_leave':
             await handleFishjamLeave(connection, message.roomId)
+            break
+          case 'fishjam_join_as_guest':
+            await handleFishjamJoinAsGuest(connection, message.roomId, message.guestName)
             break
         }
       } catch (err) {
@@ -95,16 +116,24 @@ export function createServer(options: ServerOptions) {
     ws.on('close', async () => {
       console.log(`Client disconnected: ${clientId}`)
 
-      // Close Gemini session
-      connection.geminiSession?.close()
-
-      // Clean up Fishjam room if exists
+      // Remove from room participants
       if (connection.roomId) {
-        try {
-          const fishjam = getFishjamService()
-          await fishjam.closeRoom(connection.roomId)
-        } catch {
-          // Ignore errors during cleanup
+        const room = rooms.get(connection.roomId)
+        if (room) {
+          room.participants.delete(clientId)
+
+          // If host disconnected, close the room
+          if (room.hostConnectionId === clientId) {
+            room.geminiSession?.close()
+            rooms.delete(connection.roomId)
+
+            try {
+              const fishjam = getFishjamService()
+              await fishjam.closeRoom(connection.roomId)
+            } catch {
+              // Ignore cleanup errors
+            }
+          }
         }
       }
 
@@ -116,94 +145,147 @@ export function createServer(options: ServerOptions) {
     })
   })
 
+  async function handleFishjamJoin(connection: ClientConnection, streamerId: string) {
+    console.log(`handleFishjamJoin called for streamer: ${streamerId}`)
+    try {
+      const fishjam = getFishjamService()
+      console.log('Creating Fishjam room...')
+      const { roomId, streamerToken, agent } = await fishjam.createStreamRoom(streamerId)
+      console.log(`Room created: ${roomId}`)
+
+      // Create room and add host
+      const room: Room = {
+        id: roomId,
+        hostConnectionId: connection.id,
+        geminiSession: null,
+        participants: new Set([connection.id]),
+      }
+      rooms.set(roomId, room)
+
+      connection.roomId = roomId
+      connection.role = 'host'
+      connection.name = 'Host'
+
+      // Create Gemini Live session - broadcasts to all room participants
+      room.geminiSession = await createGeminiLiveSession(agent, {
+        onTranscript: (text, isFinal, speakerId) => {
+          broadcastToRoom(roomId, {
+            kind: 'transcript',
+            text: speakerId ? `[${speakerId}] ${text}` : text,
+            isFinal,
+            timestamp: Date.now(),
+          })
+        },
+        onReasoning: (text) => {
+          broadcastToRoom(roomId, {
+            kind: 'reasoning',
+            text,
+            timestamp: Date.now(),
+          })
+        },
+        onOverlayProposal: (proposal) => {
+          broadcastToRoom(roomId, {
+            kind: 'overlay_proposal',
+            proposal,
+          })
+        },
+        onError: (err) => {
+          console.error('Gemini Live session error:', err)
+        },
+      })
+
+      console.log(`Gemini Live session created for room ${roomId}`)
+
+      sendMessage(connection.ws, {
+        kind: 'fishjam_room_created',
+        roomId,
+        streamerToken,
+      })
+    } catch (error) {
+      console.error('Failed to create Fishjam room:', error)
+      sendMessage(connection.ws, {
+        kind: 'session_status',
+        connected: true,
+        sessionId: connection.id,
+        reconnecting: false,
+      })
+    }
+  }
+
+  async function handleFishjamJoinAsGuest(
+    connection: ClientConnection,
+    roomId: string,
+    guestName: string
+  ) {
+    console.log(`Guest "${guestName}" requesting to join room: ${roomId}`)
+    try {
+      const fishjam = getFishjamService()
+      const { guestToken } = await fishjam.createGuestToken(roomId, guestName)
+
+      // Add guest to room participants
+      const room = rooms.get(roomId)
+      if (room) {
+        room.participants.add(connection.id)
+        connection.roomId = roomId
+        connection.role = 'guest'
+        connection.name = guestName
+        console.log(`Guest "${guestName}" added to room ${roomId}, total participants: ${room.participants.size}`)
+      }
+
+      sendMessage(connection.ws, {
+        kind: 'fishjam_guest_token',
+        roomId,
+        guestToken,
+        guestName,
+      })
+
+      console.log(`Guest token created for "${guestName}" in room ${roomId}`)
+    } catch (error) {
+      console.error('Failed to create guest token:', error)
+    }
+  }
+
+  async function handleFishjamLeave(connection: ClientConnection, roomId: string) {
+    try {
+      const room = rooms.get(roomId)
+
+      if (room) {
+        room.participants.delete(connection.id)
+
+        // If host is leaving, close everything
+        if (room.hostConnectionId === connection.id) {
+          room.geminiSession?.close()
+          rooms.delete(roomId)
+
+          const fishjam = getFishjamService()
+          await fishjam.closeRoom(roomId)
+        }
+      }
+
+      connection.roomId = null
+      connection.role = null
+
+      sendMessage(connection.ws, {
+        kind: 'fishjam_room_closed',
+        roomId,
+      })
+    } catch (error) {
+      console.error('Failed to close Fishjam room:', error)
+    }
+  }
+
   console.log(`WebSocket server started on port ${port}`)
 
   return {
     close: () => {
+      for (const [, room] of rooms) {
+        room.geminiSession?.close()
+      }
       for (const [, client] of clients) {
-        client.geminiSession?.close()
         client.ws.close()
       }
       wss.close()
     },
-  }
-}
-
-async function handleFishjamJoin(connection: ClientConnection, streamerId: string) {
-  console.log(`handleFishjamJoin called for streamer: ${streamerId}`)
-  try {
-    const fishjam = getFishjamService()
-    console.log('Creating Fishjam room...')
-    const { roomId, streamerToken, agent } = await fishjam.createStreamRoom(streamerId)
-    console.log(`Room created: ${roomId}`)
-
-    connection.roomId = roomId
-
-    // Create Gemini Live session connected to the Fishjam agent
-    // Audio flows: Streamer -> Fishjam Room -> Agent -> Gemini Live API
-    connection.geminiSession = await createGeminiLiveSession(agent, {
-      onTranscript: (text, isFinal) => {
-        sendMessage(connection.ws, {
-          kind: 'transcript',
-          text,
-          isFinal,
-          timestamp: Date.now(),
-        })
-      },
-      onReasoning: (text) => {
-        sendMessage(connection.ws, {
-          kind: 'reasoning',
-          text,
-          timestamp: Date.now(),
-        })
-      },
-      onOverlayProposal: (proposal) => {
-        sendMessage(connection.ws, {
-          kind: 'overlay_proposal',
-          proposal,
-        })
-      },
-      onError: (err) => {
-        console.error('Gemini Live session error:', err)
-      },
-    })
-
-    console.log(`Gemini Live session created for room ${roomId}`)
-
-    sendMessage(connection.ws, {
-      kind: 'fishjam_room_created',
-      roomId,
-      streamerToken,
-    })
-  } catch (error) {
-    console.error('Failed to create Fishjam room:', error)
-    // Send error to client
-    sendMessage(connection.ws, {
-      kind: 'session_status',
-      connected: true,
-      sessionId: connection.id,
-      reconnecting: false,
-    })
-  }
-}
-
-async function handleFishjamLeave(connection: ClientConnection, roomId: string) {
-  try {
-    // Close Gemini session first
-    connection.geminiSession?.close()
-    connection.geminiSession = null
-
-    const fishjam = getFishjamService()
-    await fishjam.closeRoom(roomId)
-
-    connection.roomId = null
-
-    sendMessage(connection.ws, {
-      kind: 'fishjam_room_closed',
-      roomId,
-    })
-  } catch (error) {
-    console.error('Failed to close Fishjam room:', error)
   }
 }
 
