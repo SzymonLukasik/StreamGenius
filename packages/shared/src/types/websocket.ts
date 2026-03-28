@@ -6,6 +6,11 @@ export interface AudioChunkMessage {
   data: string
 }
 
+export interface TextInputMessage {
+  kind: 'text_input'
+  text: string
+}
+
 export interface OverlayApproveMessage {
   kind: 'overlay_approve'
   id: string
@@ -16,7 +21,23 @@ export interface OverlayDismissMessage {
   id: string
 }
 
-export type ClientMessage = AudioChunkMessage | OverlayApproveMessage | OverlayDismissMessage
+export interface FishjamJoinMessage {
+  kind: 'fishjam_join'
+  streamerId: string
+}
+
+export interface FishjamLeaveMessage {
+  kind: 'fishjam_leave'
+  roomId: string
+}
+
+export type ClientMessage =
+  | AudioChunkMessage
+  | TextInputMessage
+  | OverlayApproveMessage
+  | OverlayDismissMessage
+  | FishjamJoinMessage
+  | FishjamLeaveMessage
 
 // Server -> Client messages
 export interface TranscriptMessage {
@@ -38,7 +59,30 @@ export interface SessionStatusMessage {
   reconnecting: boolean
 }
 
-export type ServerMessage = TranscriptMessage | OverlayProposalMessage | SessionStatusMessage
+export interface FishjamRoomCreatedMessage {
+  kind: 'fishjam_room_created'
+  roomId: string
+  streamerToken: string
+}
+
+export interface FishjamRoomClosedMessage {
+  kind: 'fishjam_room_closed'
+  roomId: string
+}
+
+export interface ReasoningMessage {
+  kind: 'reasoning'
+  text: string
+  timestamp: number
+}
+
+export type ServerMessage =
+  | TranscriptMessage
+  | OverlayProposalMessage
+  | SessionStatusMessage
+  | FishjamRoomCreatedMessage
+  | FishjamRoomClosedMessage
+  | ReasoningMessage
 
 export type WebSocketMessage = ClientMessage | ServerMessage
 

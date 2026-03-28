@@ -5,17 +5,20 @@ interface OverlayState {
   overlays: ClientOverlay[]
   transcript: string
   transcriptFinal: boolean
+  reasoning: string
 
   addOverlay: (proposal: OverlayProposal) => void
   updateOverlayStatus: (id: string, status: ClientOverlayStatus) => void
   removeOverlay: (id: string) => void
   setTranscript: (text: string, isFinal: boolean) => void
+  setReasoning: (text: string) => void
 }
 
 export const useOverlayStore = create<OverlayState>((set) => ({
   overlays: [],
   transcript: '',
   transcriptFinal: false,
+  reasoning: '',
 
   addOverlay: (proposal) =>
     set((state) => {
@@ -54,5 +57,15 @@ export const useOverlayStore = create<OverlayState>((set) => ({
     set({
       transcript: text,
       transcriptFinal: isFinal,
+    }),
+
+  setReasoning: (text) =>
+    set((state) => ({
+      reasoning: state.reasoning + text,
+    })),
+
+  clearReasoning: () =>
+    set({
+      reasoning: '',
     }),
 }))

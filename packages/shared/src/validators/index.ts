@@ -70,6 +70,11 @@ export const audioChunkMessageSchema = z.object({
   data: z.string(),
 })
 
+export const textInputMessageSchema = z.object({
+  kind: z.literal('text_input'),
+  text: z.string(),
+})
+
 export const overlayApproveMessageSchema = z.object({
   kind: z.literal('overlay_approve'),
   id: z.string(),
@@ -80,10 +85,23 @@ export const overlayDismissMessageSchema = z.object({
   id: z.string(),
 })
 
+export const fishjamJoinMessageSchema = z.object({
+  kind: z.literal('fishjam_join'),
+  streamerId: z.string(),
+})
+
+export const fishjamLeaveMessageSchema = z.object({
+  kind: z.literal('fishjam_leave'),
+  roomId: z.string(),
+})
+
 export const clientMessageSchema = z.discriminatedUnion('kind', [
   audioChunkMessageSchema,
+  textInputMessageSchema,
   overlayApproveMessageSchema,
   overlayDismissMessageSchema,
+  fishjamJoinMessageSchema,
+  fishjamLeaveMessageSchema,
 ])
 
 // Server -> Client message schemas
@@ -106,10 +124,30 @@ export const sessionStatusMessageSchema = z.object({
   reconnecting: z.boolean(),
 })
 
+export const fishjamRoomCreatedMessageSchema = z.object({
+  kind: z.literal('fishjam_room_created'),
+  roomId: z.string(),
+  streamerToken: z.string(),
+})
+
+export const fishjamRoomClosedMessageSchema = z.object({
+  kind: z.literal('fishjam_room_closed'),
+  roomId: z.string(),
+})
+
+export const reasoningMessageSchema = z.object({
+  kind: z.literal('reasoning'),
+  text: z.string(),
+  timestamp: z.number(),
+})
+
 export const serverMessageSchema = z.discriminatedUnion('kind', [
   transcriptMessageSchema,
   overlayProposalMessageSchema,
   sessionStatusMessageSchema,
+  fishjamRoomCreatedMessageSchema,
+  fishjamRoomClosedMessageSchema,
+  reasoningMessageSchema,
 ])
 
 export const webSocketMessageSchema = z.union([clientMessageSchema, serverMessageSchema])

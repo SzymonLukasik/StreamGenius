@@ -10,9 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fishjam-cloud/react-client": "^0.25.3",
     "@streamgenius/shared": "workspace:*",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-markdown": "^10.1.0",
     "zustand": "^4.5.0"
   },
   "devDependencies": {

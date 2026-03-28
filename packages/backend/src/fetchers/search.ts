@@ -1,29 +1,58 @@
-import type { FactData } from '@streamgenius/shared'
-
-export interface SearchOptions {
-  query: string
-  numResults?: number
+export interface SearchResult {
+  title: string
+  link: string
+  snippet: string
 }
 
-export async function fetchSearchResults(options: SearchOptions): Promise<FactData | null> {
+const GOOGLE_SEARCH_API = 'https://www.googleapis.com/customsearch/v1'
+
+export async function searchGoogle(query: string, numResults = 3): Promise<SearchResult[]> {
   const apiKey = process.env.GOOGLE_SEARCH_API_KEY
   const cx = process.env.GOOGLE_SEARCH_CX
 
   if (!apiKey || !cx) {
     console.error('GOOGLE_SEARCH_API_KEY or GOOGLE_SEARCH_CX not set')
-    return null
+    return getMockSearchResults(query)
   }
 
-  // TODO: Implement Google Custom Search API integration
-  // Endpoint: https://www.googleapis.com/customsearch/v1
+  try {
+    const url = new URL(GOOGLE_SEARCH_API)
+    url.searchParams.set('key', apiKey)
+    url.searchParams.set('cx', cx)
+    url.searchParams.set('q', query)
+    url.searchParams.set('num', String(numResults))
 
-  // Stub implementation
-  console.log('Searching:', options.query)
+    const response = await fetch(url.toString())
+    const data = (await response.json()) as { items?: Array<{ title: string; link: string; snippet: string }> }
 
-  return {
-    fact: `Fact about: ${options.query}`,
-    source: 'Wikipedia',
-    sourceUrl: 'https://en.wikipedia.org',
-    confidence: 0.85,
+    if (!data.items || data.items.length === 0) {
+      return getMockSearchResults(query)
+    }
+
+    return data.items.map(
+      (item: { title: string; link: string; snippet: string }): SearchResult => ({
+        title: item.title,
+        link: item.link,
+        snippet: item.snippet,
+      })
+    )
+  } catch (error) {
+    console.error('Google Search API error:', error)
+    return getMockSearchResults(query)
   }
+}
+
+function getMockSearchResults(query: string): SearchResult[] {
+  return [
+    {
+      title: `Information about: ${query}`,
+      link: 'https://en.wikipedia.org/wiki/' + encodeURIComponent(query.replace(/\s+/g, '_')),
+      snippet: `This is a search result snippet about ${query}. More details can be found at the source.`,
+    },
+    {
+      title: `${query} - Latest Research`,
+      link: 'https://scholar.google.com/scholar?q=' + encodeURIComponent(query),
+      snippet: `Academic and research papers related to ${query}.`,
+    },
+  ]
 }

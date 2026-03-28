@@ -1,8 +1,10 @@
 import { ControlPanel } from './components/ControlPanel'
 import { OverlayQueue } from './components/OverlayQueue'
+import { BroadcastControls } from './components/BroadcastControls'
+import { FishjamProvider } from './providers/FishjamProvider'
 import { useWebSocket } from './hooks/useWebSocket'
 
-export function App() {
+function AppContent() {
   const { isConnected, sessionId, reconnecting } = useWebSocket()
 
   return (
@@ -22,17 +24,34 @@ export function App() {
       </header>
 
       <main style={styles.main}>
-        <section style={styles.section}>
-          <h2 style={styles.sectionTitle}>Control Panel</h2>
-          <ControlPanel />
-        </section>
+        <div style={styles.leftColumn}>
+          <section style={styles.section}>
+            <h2 style={styles.sectionTitle}>Stream Preview</h2>
+            <BroadcastControls />
+          </section>
 
-        <section style={styles.section}>
-          <h2 style={styles.sectionTitle}>Overlay Queue</h2>
-          <OverlayQueue />
-        </section>
+          <section style={styles.section}>
+            <h2 style={styles.sectionTitle}>Control Panel</h2>
+            <ControlPanel />
+          </section>
+        </div>
+
+        <div style={styles.rightColumn}>
+          <section style={styles.section}>
+            <h2 style={styles.sectionTitle}>Overlay Queue</h2>
+            <OverlayQueue />
+          </section>
+        </div>
       </main>
     </div>
+  )
+}
+
+export function App() {
+  return (
+    <FishjamProvider>
+      <AppContent />
+    </FishjamProvider>
   )
 }
 
@@ -40,7 +59,7 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     minHeight: '100vh',
     padding: '20px',
-    maxWidth: '1200px',
+    maxWidth: '1400px',
     margin: '0 auto',
   },
   header: {
@@ -74,8 +93,18 @@ const styles: Record<string, React.CSSProperties> = {
   },
   main: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    gridTemplateColumns: '2fr 1fr',
     gap: '30px',
+  },
+  leftColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+  },
+  rightColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
   },
   section: {
     backgroundColor: '#1a1a1a',

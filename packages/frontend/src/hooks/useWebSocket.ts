@@ -3,8 +3,14 @@ import { useOverlayStore } from '../store/overlays'
 import type { ClientMessage, ServerMessage } from '@streamgenius/shared'
 import { serverMessageSchema } from '@streamgenius/shared'
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3002'
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001'
+console.log('WebSocket URL:', WS_URL)
 const RECONNECT_DELAY = 3000
+
+interface FishjamCallbacks {
+  onRoomCreated?: (roomId: string, streamerToken: string) => void
+  onRoomClosed?: (roomId: string) => void
+}
 
 interface WebSocketState {
   isConnected: boolean
@@ -12,6 +18,8 @@ interface WebSocketState {
   reconnecting: boolean
   sendMessage: (message: ClientMessage) => void
 }
+
+let fishjamCallbacks: FishjamCallbacks = {}
 
 let globalWs: WebSocket | null = null
 let globalState: WebSocketState = {
@@ -96,7 +104,25 @@ function handleServerMessage(message: ServerMessage) {
     case 'overlay_proposal':
       store.addOverlay(message.proposal)
       break
+
+    case 'fishjam_room_created':
+      console.log('Received fishjam_room_created:', message.roomId)
+      fishjamCallbacks.onRoomCreated?.(message.roomId, message.streamerToken)
+      break
+
+    case 'fishjam_room_closed':
+      console.log('Received fishjam_room_closed:', message.roomId)
+      fishjamCallbacks.onRoomClosed?.(message.roomId)
+      break
+
+    case 'reasoning':
+      store.setReasoning(message.text)
+      break
   }
+}
+
+export function setFishjamCallbacks(callbacks: FishjamCallbacks) {
+  fishjamCallbacks = callbacks
 }
 
 export function useWebSocket(): WebSocketState {
