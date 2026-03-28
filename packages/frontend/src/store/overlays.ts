@@ -1,10 +1,19 @@
 import { create } from 'zustand'
 import type { OverlayProposal, ClientOverlay, ClientOverlayStatus } from '@streamgenius/shared'
 
+export interface TranscriptMessage {
+  id: string
+  speaker: string
+  text: string
+  timestamp: number
+  isFinal: boolean
+}
+
 interface OverlayState {
   overlays: ClientOverlay[]
   transcript: string
   transcriptFinal: boolean
+  transcriptMessages: TranscriptMessage[]
   reasoning: string
 
   addOverlay: (proposal: OverlayProposal) => void
@@ -13,12 +22,23 @@ interface OverlayState {
   setTranscript: (text: string, isFinal: boolean) => void
   setReasoning: (text: string) => void
   clearReasoning: () => void
+  clearTranscript: () => void
+}
+
+// Parse speaker from transcript text like "[Speaker 1] Hello world"
+function parseTranscript(text: string): { speaker: string; message: string } {
+  const match = text.match(/^\[([^\]]+)\]\s*(.*)$/)
+  if (match) {
+    return { speaker: match[1], message: match[2] }
+  }
+  return { speaker: 'Unknown', message: text }
 }
 
 export const useOverlayStore = create<OverlayState>((set) => ({
   overlays: [],
   transcript: '',
   transcriptFinal: false,
+  transcriptMessages: [],
   reasoning: '',
 
   addOverlay: (proposal) =>
@@ -55,9 +75,73 @@ export const useOverlayStore = create<OverlayState>((set) => ({
     })),
 
   setTranscript: (text, isFinal) =>
-    set({
-      transcript: text,
-      transcriptFinal: isFinal,
+    set((state) => {
+      const { speaker, message } = parseTranscript(text)
+
+      // Skip empty messages
+      if (!message.trim()) {
+        return { transcript: text, transcriptFinal: isFinal }
+      }
+
+      // If not final, update the last message from this speaker (live update)
+      if (!isFinal) {
+        const lastMsg = state.transcriptMessages[state.transcriptMessages.length - 1]
+        if (lastMsg && lastMsg.speaker === speaker && !lastMsg.isFinal) {
+          // Update last message in place
+          return {
+            transcript: text,
+            transcriptFinal: isFinal,
+            transcriptMessages: [
+              ...state.transcriptMessages.slice(0, -1),
+              { ...lastMsg, text: message },
+            ],
+          }
+        }
+        // New interim message
+        return {
+          transcript: text,
+          transcriptFinal: isFinal,
+          transcriptMessages: [
+            ...state.transcriptMessages,
+            {
+              id: `msg-${Date.now()}`,
+              speaker,
+              text: message,
+              timestamp: Date.now(),
+              isFinal: false,
+            },
+          ],
+        }
+      }
+
+      // Final message - mark last interim as final or add new
+      const lastMsg = state.transcriptMessages[state.transcriptMessages.length - 1]
+      if (lastMsg && lastMsg.speaker === speaker && !lastMsg.isFinal) {
+        return {
+          transcript: text,
+          transcriptFinal: isFinal,
+          transcriptMessages: [
+            ...state.transcriptMessages.slice(0, -1),
+            { ...lastMsg, text: message, isFinal: true },
+          ],
+        }
+      }
+
+      // New final message
+      return {
+        transcript: text,
+        transcriptFinal: isFinal,
+        transcriptMessages: [
+          ...state.transcriptMessages,
+          {
+            id: `msg-${Date.now()}`,
+            speaker,
+            text: message,
+            timestamp: Date.now(),
+            isFinal: true,
+          },
+        ],
+      }
     }),
 
   setReasoning: (text) =>
@@ -68,5 +152,12 @@ export const useOverlayStore = create<OverlayState>((set) => ({
   clearReasoning: () =>
     set({
       reasoning: '',
+    }),
+
+  clearTranscript: () =>
+    set({
+      transcript: '',
+      transcriptFinal: false,
+      transcriptMessages: [],
     }),
 }))
