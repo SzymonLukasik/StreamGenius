@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { config } from 'dotenv'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -11,17 +10,6 @@ import { createServer } from './server.js'
 const PORT = parseInt(process.env.PORT || '3001', 10)
 const FISHJAM_ID = process.env.FISHJAM_ID
 const FISHJAM_MANAGEMENT_TOKEN = process.env.FISHJAM_MANAGEMENT_TOKEN
-=======
-import * as dotenv from 'dotenv'
-import path from 'path'
-import { fileURLToPath } from 'url'
-import { createServer } from './server.js'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
-
-const WS_PORT = parseInt(process.env.WS_PORT || '3002', 10)
->>>>>>> dce6403259409192316b54231e5d419d4ff64bcb
 
 async function main() {
   console.log(`StreamGenius Backend`)
