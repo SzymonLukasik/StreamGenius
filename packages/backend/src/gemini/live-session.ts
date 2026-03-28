@@ -72,7 +72,20 @@ export async function createGeminiLiveSession(
   })
 
   // Forward audio from Fishjam to Gemini
+  let chunkCount = 0
+  let lastLogTime = Date.now()
+
   agent.on('trackData', (trackData: IncomingTrackData) => {
+    chunkCount++
+    const now = Date.now()
+
+    // Log chunk rate every 5 seconds
+    if (now - lastLogTime >= 5000) {
+      console.log(`Audio chunks sent: ${chunkCount} in last 5s (${(chunkCount / 5).toFixed(1)}/sec)`)
+      chunkCount = 0
+      lastLogTime = now
+    }
+
     session.sendRealtimeInput({
       audio: {
         mimeType: inputMimeType,
