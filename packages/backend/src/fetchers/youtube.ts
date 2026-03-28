@@ -24,6 +24,7 @@ export async function fetchYoutubeVideo(
     searchUrl.searchParams.set('key', apiKey)
 
     const searchResponse = await fetch(searchUrl.toString())
+    if (!searchResponse.ok) throw new Error(`YouTube search API error: ${searchResponse.status}`)
     const searchData = (await searchResponse.json()) as {
       items?: Array<{ id?: { videoId?: string } }>
     }
@@ -41,6 +42,7 @@ export async function fetchYoutubeVideo(
     videoUrl.searchParams.set('key', apiKey)
 
     const videoResponse = await fetch(videoUrl.toString())
+    if (!videoResponse.ok) throw new Error(`YouTube video API error: ${videoResponse.status}`)
     const videoData = (await videoResponse.json()) as {
       items?: Array<{
         snippet: {
