@@ -143,7 +143,6 @@ function BroadcastControlsInner() {
     <div style={styles.container}>
       <StreamPreview
         stream={videoStream}
-        isLive={state.isConnected}
         compositionReady={compositionReady}
         compositionError={mode === 'host' ? compositionError?.message ?? null : null}
       />

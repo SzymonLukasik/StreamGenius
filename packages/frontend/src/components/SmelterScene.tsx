@@ -25,6 +25,8 @@ export function SmelterScene() {
     >
       <Rescaler
         style={{
+          top: 0,
+          left: 0,
           width: SMELTER_OUTPUT_RESOLUTION.width,
           height: SMELTER_OUTPUT_RESOLUTION.height,
           rescaleMode: 'fill',
@@ -33,30 +35,33 @@ export function SmelterScene() {
         <InputStream inputId={SMELTER_CAMERA_INPUT_ID} />
       </Rescaler>
 
-      <View
-        style={{
-          left: 36,
-          bottom: 34,
-          width: 1208,
-          direction: 'column',
-        }}
-      >
-        {activeOverlays.map((overlay) => (
-          <View
-            key={overlay.id}
-            id={`overlay-${overlay.id}`}
-            style={{ paddingBottom: 14 }}
-            transition={{ durationMs: 240, easingFunction: 'linear' }}
-          >
-            <OverlayCard overlay={overlay} />
-          </View>
-        ))}
-      </View>
+      {activeOverlays.length > 0 && (
+        <View
+          style={{
+            left: 36,
+            top: SMELTER_OUTPUT_RESOLUTION.height - 220,
+            width: 1208,
+            direction: 'column',
+          }}
+        >
+          {activeOverlays.map((overlay) => (
+            <View
+              key={overlay.id}
+              id={`overlay-${overlay.id}`}
+              style={{ paddingBottom: 14 }}
+              transition={{ durationMs: 240, easingFunction: 'linear' }}
+            >
+              <OverlayCard overlay={overlay} />
+            </View>
+          ))}
+        </View>
+      )}
 
       <View
         style={{
           top: 20,
-          right: 20,
+          left: 1280 - 220,
+          width: 200,
           backgroundColor: '#000000B0',
           borderRadius: 12,
           paddingHorizontal: 14,
@@ -68,7 +73,7 @@ export function SmelterScene() {
       >
         <Text
           style={{
-            fontSize: 20,
+            fontSize: 18,
             color: '#F8FAFC',
             fontWeight: 'bold',
           }}
@@ -77,7 +82,7 @@ export function SmelterScene() {
         </Text>
         <Text
           style={{
-            fontSize: 12,
+            fontSize: 11,
             color: '#CBD5E1',
             fontWeight: 'medium',
           }}

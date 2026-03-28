@@ -34,10 +34,8 @@ interface UseFishjamBroadcastResult {
 
 export function useFishjamBroadcast(): UseFishjamBroadcastResult {
   const { joinRoom, leaveRoom, peerStatus } = useConnection()
-  const { startCamera, stopCamera, cameraStream } = useCamera()
   const { startMicrophone, stopMicrophone, microphoneStream, isMicrophoneMuted, toggleMicrophoneMute } = useMicrophone()
   const { remotePeers } = usePeers()
-  const { startMicrophone, stopMicrophone, microphoneStream } = useMicrophone()
   const { setStream: setCustomSourceStream } = useCustomSource(SMELTER_SOURCE_ID)
   const { composedStream, isReady, error: compositionError, startComposition, stopComposition } =
     useSmelterComposition()
