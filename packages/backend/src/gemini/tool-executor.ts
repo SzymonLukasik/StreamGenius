@@ -2,7 +2,6 @@ import { randomUUID } from 'crypto'
 import type { OverlayProposal, OverlayType, OverlayData } from '@streamgenius/shared'
 import { fetchYoutubeVideo } from '../fetchers/youtube.js'
 import { searchGoogle } from '../fetchers/search.js'
-import { analyzeWithGeminiPro } from '../fetchers/gemini-pro.js'
 
 export interface ToolExecutorCallbacks {
   onOverlayProposal: (proposal: OverlayProposal) => void
@@ -158,25 +157,17 @@ export class ToolExecutor {
     verdict?: 'verified' | 'disputed' | 'partially_true' | 'unverified'
     explanation?: string
     confidence?: number
+    sources?: Array<{ title: string; url: string; relevance: string }>
   }) {
     console.log(`Analyzing claim: ${args.claim}`)
 
-    let analysis
-
-    // If Gemini Live provided verdict/explanation, use that (fallback mode)
-    if (args.verdict && args.explanation) {
-      console.log('Using Gemini Live provided analysis')
-      analysis = {
-        claim: args.claim,
-        verdict: args.verdict,
-        explanation: args.explanation,
-        sources: [],
-        confidence: args.confidence ?? 0.7,
-      }
-    } else {
-      // Try Gemini Pro API for deeper analysis with sources
-      console.log('Calling Gemini API for deep analysis...')
-      analysis = await analyzeWithGeminiPro(args.claim)
+    // Use Gemini Live's own analysis - no external API call needed
+    const analysis = {
+      claim: args.claim,
+      verdict: args.verdict || 'unverified',
+      explanation: args.explanation || 'Analyzing this claim...',
+      sources: args.sources || [],
+      confidence: args.confidence ?? 0.7,
     }
 
     // Cache the result for show_overlay

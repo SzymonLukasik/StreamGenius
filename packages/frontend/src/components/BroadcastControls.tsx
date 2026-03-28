@@ -7,7 +7,7 @@ import { StreamPreview } from './StreamPreview'
 type Mode = 'idle' | 'host' | 'guest'
 
 function BroadcastControlsInner() {
-  const { state, startBroadcast, stopBroadcast, videoStream } = useFishjamBroadcast()
+  const { state, startBroadcast, stopBroadcast, videoStream, isMuted, toggleMute } = useFishjamBroadcast()
   const { sendMessage, isConnected: wsConnected } = useWebSocket()
   const [streamerId] = useState(() => `streamer_${Date.now()}`)
   const [pendingStart, setPendingStart] = useState(false)
@@ -184,6 +184,9 @@ function BroadcastControlsInner() {
 
       {state.isConnected && (
         <div style={styles.controls}>
+          <button onClick={toggleMute} style={isMuted ? styles.muteButtonActive : styles.muteButton}>
+            {isMuted ? 'Unmute' : 'Mute'}
+          </button>
           <button onClick={handleStopBroadcast} style={styles.stopButton}>
             {mode === 'host' ? 'Stop Broadcast' : 'Leave Room'}
           </button>
@@ -266,6 +269,26 @@ const styles: Record<string, React.CSSProperties> = {
   stopButton: {
     padding: '12px 24px',
     backgroundColor: '#ef4444',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  muteButton: {
+    padding: '12px 24px',
+    backgroundColor: '#6b7280',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  muteButtonActive: {
+    padding: '12px 24px',
+    backgroundColor: '#f59e0b',
     color: '#fff',
     border: 'none',
     borderRadius: '8px',

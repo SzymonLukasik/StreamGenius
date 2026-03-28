@@ -14,12 +14,14 @@ interface UseFishjamBroadcastResult {
   stopBroadcast: () => void
   videoStream: MediaStream | null
   audioStream: MediaStream | null
+  isMuted: boolean
+  toggleMute: () => Promise<void>
 }
 
 export function useFishjamBroadcast(): UseFishjamBroadcastResult {
   const { joinRoom, leaveRoom, peerStatus } = useConnection()
   const { startCamera, stopCamera, cameraStream } = useCamera()
-  const { startMicrophone, stopMicrophone, microphoneStream } = useMicrophone()
+  const { startMicrophone, stopMicrophone, microphoneStream, isMicrophoneMuted, toggleMicrophoneMute } = useMicrophone()
 
   const [state, setState] = useState<BroadcastState>({
     isConnected: false,
@@ -91,5 +93,7 @@ export function useFishjamBroadcast(): UseFishjamBroadcastResult {
     stopBroadcast,
     videoStream: cameraStream ?? null,
     audioStream: microphoneStream ?? null,
+    isMuted: isMicrophoneMuted,
+    toggleMute: toggleMicrophoneMute,
   }
 }

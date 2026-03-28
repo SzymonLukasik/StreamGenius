@@ -1,33 +1,44 @@
 import { GoogleGenAI } from '@google/genai'
 import type { DeepAnalysisData } from '@streamgenius/shared'
-import { deepAnalysisDataSchema } from '@streamgenius/shared'
 
 export async function analyzeWithGeminiPro(
   claim: string,
-  topic?: string
+  _topic?: string
 ): Promise<DeepAnalysisData> {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
+    console.warn('GEMINI_API_KEY not set, using mock analysis')
     return getMockAnalysis(claim)
   }
+
+  console.log('Starting Gemini API analysis for claim:', claim)
 
   try {
     const genAI = new GoogleGenAI({ apiKey })
 
-    const prompt = `Analyze this claim for accuracy: "${claim}"
-${topic ? `Context/Topic: ${topic}` : ''}
+    const prompt = `You are a fact-checker. Analyze this claim: "${claim}"
 
-Respond in JSON format only (no markdown code blocks):
+Determine if this claim is true, false, or uncertain. Provide:
+1. verdict: "verified" (claim is true), "disputed" (claim is false), "partially_true", or "unverified"
+2. explanation: 1-2 sentence explanation
+3. sources: 2-3 relevant source URLs
+4. confidence: 0.0-1.0
+
+Example for "Python is faster than C++":
 {
-  "verdict": "verified" | "disputed" | "unverified" | "partially_true",
-  "explanation": "Brief explanation of the analysis (1-2 sentences)",
+  "verdict": "disputed",
+  "explanation": "C++ is generally faster than Python. Python is an interpreted language while C++ is compiled, making C++ significantly faster for most computational tasks.",
   "sources": [
-    {"title": "Source name", "url": "https://...", "relevance": "Why this source is relevant"}
+    {"title": "Python vs C++ Performance", "url": "https://benchmarksgame-team.pages.debian.net/benchmarksgame/", "relevance": "Performance benchmarks"},
+    {"title": "Stack Overflow Discussion", "url": "https://stackoverflow.com/questions/801657/is-python-faster-and-lighter-than-c", "relevance": "Developer community insights"}
   ],
-  "confidence": 0.0-1.0
+  "confidence": 0.95
 }
 
-Be concise. Include 2-3 credible sources if possible. Return ONLY the JSON object.`
+Now analyze: "${claim}"
+Return ONLY the JSON object, no other text.`
+
+    console.log('Calling Gemini 2.5 Flash...')
 
     const result = await genAI.models.generateContent({
       model: 'gemini-2.0-flash',
@@ -35,16 +46,24 @@ Be concise. Include 2-3 credible sources if possible. Return ONLY the JSON objec
     })
 
     const text = result.text || ''
+    console.log('Gemini API raw response:', text)
 
+    // Try to extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (jsonMatch) {
-      const validated = deepAnalysisDataSchema.safeParse({ claim, ...JSON.parse(jsonMatch[0]) })
-      if (validated.success) return validated.data
+      try {
+        const parsed = JSON.parse(jsonMatch[0]) as Omit<DeepAnalysisData, 'claim'>
+        console.log('Successfully parsed analysis:', parsed.verdict)
+        return { claim, ...parsed }
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError, 'Raw:', jsonMatch[0])
+      }
     }
 
+    console.warn('Could not parse Gemini response, using mock')
     return getMockAnalysis(claim)
   } catch (error) {
-    console.error('Gemini Pro analysis error:', error)
+    console.error('Gemini API error:', error instanceof Error ? error.message : error)
     return getMockAnalysis(claim)
   }
 }
