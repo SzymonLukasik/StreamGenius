@@ -81,6 +81,7 @@ export const textInputMessageSchema = z.object({
 export const overlayApproveMessageSchema = z.object({
   kind: z.literal('overlay_approve'),
   id: z.string(),
+  overlayType: overlayTypeSchema,
 })
 
 export const overlayDismissMessageSchema = z.object({

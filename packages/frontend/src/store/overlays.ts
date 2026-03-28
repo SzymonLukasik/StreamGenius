@@ -26,7 +26,7 @@ export const useOverlayStore = create<OverlayState>((set) => ({
       const existing = state.overlays.find((o) => o.id === proposal.id)
       if (existing) {
         const newStatus: ClientOverlayStatus =
-          proposal.status === 'error' ? 'dismissed' : proposal.status
+          proposal.status === 'error' ? 'skipped' : proposal.status
         return {
           overlays: state.overlays.map((o) =>
             o.id === proposal.id ? { ...o, status: newStatus, data: proposal.data } : o
@@ -36,7 +36,7 @@ export const useOverlayStore = create<OverlayState>((set) => ({
 
       const clientOverlay: ClientOverlay = {
         ...proposal,
-        status: proposal.status === 'error' ? 'dismissed' : proposal.status,
+        status: proposal.status === 'error' ? 'skipped' : proposal.status,
       }
 
       return {
