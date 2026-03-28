@@ -1,5 +1,16 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useConnection, useCamera, useMicrophone } from '@fishjam-cloud/react-client'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useConnection, useCustomSource, useMicrophone } from '@fishjam-cloud/react-client'
+import { useSmelterComposition } from './useSmelterComposition'
+
+const SMELTER_SOURCE_ID = 'smelter-output'
+const CAMERA_CONSTRAINTS: MediaStreamConstraints = {
+  video: {
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+    frameRate: { ideal: 30, max: 30 },
+  },
+  audio: false,
+}
 
 interface BroadcastState {
   isConnected: boolean
@@ -11,15 +22,20 @@ interface BroadcastState {
 interface UseFishjamBroadcastResult {
   state: BroadcastState
   startBroadcast: (peerToken: string, roomId: string) => Promise<void>
-  stopBroadcast: () => void
+  stopBroadcast: () => Promise<void>
   videoStream: MediaStream | null
   audioStream: MediaStream | null
+  compositionReady: boolean
+  compositionError: Error | null
 }
 
 export function useFishjamBroadcast(): UseFishjamBroadcastResult {
   const { joinRoom, leaveRoom, peerStatus } = useConnection()
-  const { startCamera, stopCamera, cameraStream } = useCamera()
   const { startMicrophone, stopMicrophone, microphoneStream } = useMicrophone()
+  const { setStream: setCustomSourceStream } = useCustomSource(SMELTER_SOURCE_ID)
+  const { composedStream, isReady, error: compositionError, startComposition, stopComposition } =
+    useSmelterComposition()
+  const localCameraStreamRef = useRef<MediaStream | null>(null)
 
   const [state, setState] = useState<BroadcastState>({
     isConnected: false,
@@ -38,16 +54,27 @@ export function useFishjamBroadcast(): UseFishjamBroadcastResult {
     }))
   }, [peerStatus])
 
+  const stopLocalCamera = useCallback(() => {
+    localCameraStreamRef.current?.getTracks().forEach((track) => track.stop())
+    localCameraStreamRef.current = null
+  }, [])
+
   const startBroadcast = useCallback(
     async (peerToken: string, roomId: string) => {
       setState((prev) => ({ ...prev, isConnecting: true, error: null }))
 
       try {
-        // Start camera and microphone
-        await startCamera()
-        await startMicrophone()
+        const cameraStream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS)
+        localCameraStreamRef.current = cameraStream
 
-        // Join the room with peer token
+        const stream = await startComposition(cameraStream)
+        await setCustomSourceStream(stream)
+
+        const [, microphoneError] = await startMicrophone()
+        if (microphoneError) {
+          throw new Error(`Failed to start microphone: ${microphoneError.name}`)
+        }
+
         await joinRoom({ peerToken })
 
         setState((prev) => ({
@@ -58,8 +85,11 @@ export function useFishjamBroadcast(): UseFishjamBroadcastResult {
           roomId,
         }))
       } catch (err) {
-        stopCamera()
         stopMicrophone()
+        leaveRoom()
+        await setCustomSourceStream(null).catch(() => {})
+        await stopComposition().catch(() => {})
+        stopLocalCamera()
 
         setState((prev) => ({
           ...prev,
@@ -69,11 +99,22 @@ export function useFishjamBroadcast(): UseFishjamBroadcastResult {
         throw err
       }
     },
-    [joinRoom, startCamera, startMicrophone, stopCamera, stopMicrophone]
+    [
+      joinRoom,
+      leaveRoom,
+      setCustomSourceStream,
+      startComposition,
+      startMicrophone,
+      stopComposition,
+      stopLocalCamera,
+      stopMicrophone,
+    ]
   )
 
-  const stopBroadcast = useCallback(() => {
-    stopCamera()
+  const stopBroadcast = useCallback(async () => {
+    await setCustomSourceStream(null).catch(() => {})
+    await stopComposition().catch(() => {})
+    stopLocalCamera()
     stopMicrophone()
     leaveRoom()
 
@@ -83,13 +124,15 @@ export function useFishjamBroadcast(): UseFishjamBroadcastResult {
       error: null,
       roomId: null,
     })
-  }, [leaveRoom, stopCamera, stopMicrophone])
+  }, [leaveRoom, setCustomSourceStream, stopComposition, stopLocalCamera, stopMicrophone])
 
   return {
     state,
     startBroadcast,
     stopBroadcast,
-    videoStream: cameraStream ?? null,
+    videoStream: composedStream,
     audioStream: microphoneStream ?? null,
+    compositionReady: isReady,
+    compositionError,
   }
 }

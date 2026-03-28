@@ -5,7 +5,8 @@ import { useFishjamEnabled } from '../providers/FishjamProvider'
 import { StreamPreview } from './StreamPreview'
 
 function BroadcastControlsInner() {
-  const { state, startBroadcast, stopBroadcast, videoStream } = useFishjamBroadcast()
+  const { state, startBroadcast, stopBroadcast, videoStream, compositionReady, compositionError } =
+    useFishjamBroadcast()
   const { sendMessage, isConnected: wsConnected } = useWebSocket()
   const [streamerId] = useState(() => `streamer_${Date.now()}`)
   const [pendingStart, setPendingStart] = useState(false)
@@ -56,21 +57,26 @@ function BroadcastControlsInner() {
     sendMessage({ kind: 'fishjam_join', streamerId })
   }
 
-  const handleStopBroadcast = () => {
+  const handleStopBroadcast = async () => {
     if (state.roomId) {
       sendMessage({ kind: 'fishjam_leave', roomId: state.roomId })
     }
     pendingStartRef.current = false
     setPendingStart(false)
     setStartupError(null)
-    stopBroadcast()
+    await stopBroadcast()
   }
 
   const isStarting = pendingStart || state.isConnecting
 
   return (
     <div style={styles.container}>
-      <StreamPreview stream={videoStream} isLive={state.isConnected} />
+      <StreamPreview
+        stream={videoStream}
+        isLive={state.isConnected}
+        compositionReady={compositionReady}
+        compositionError={compositionError?.message ?? null}
+      />
 
       <div style={styles.controls}>
         {!state.isConnected && !isStarting && (
@@ -86,14 +92,16 @@ function BroadcastControlsInner() {
         )}
 
         {state.isConnected && (
-          <button onClick={handleStopBroadcast} style={styles.stopButton}>
+          <button onClick={() => void handleStopBroadcast()} style={styles.stopButton}>
             Stop Broadcast
           </button>
         )}
       </div>
 
-      {(state.error || startupError) && (
-        <p style={styles.error}>Error: {startupError ?? state.error?.message}</p>
+      {(state.error || startupError || compositionError) && (
+        <p style={styles.error}>
+          Error: {startupError ?? compositionError?.message ?? state.error?.message}
+        </p>
       )}
 
       {state.roomId && (

@@ -140,6 +140,7 @@ vite.config.ts.timestamp-*
 
 # pnpm
 .pnpm-store/
+packages/frontend/public/smelter.wasm
 
 # IDE
 .idea/
