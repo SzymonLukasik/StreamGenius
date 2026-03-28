@@ -1,4 +1,4 @@
-export type OverlayType = 'youtube_card' | 'fact_banner' | 'web_search'
+export type OverlayType = 'youtube_card' | 'fact_banner' | 'web_search' | 'comparison'
 
 export type OverlayStatus = 'fetching' | 'ready' | 'error'
 
@@ -42,7 +42,13 @@ export interface WebSearchData {
   }>
 }
 
-export type OverlayData = YoutubeData | DeepAnalysisData | WebSearchData | null
+export interface ComparisonData {
+  itemA: { name: string; pros: string[]; cons: string[] }
+  itemB: { name: string; pros: string[]; cons: string[] }
+  summary: string
+}
+
+export type OverlayData = YoutubeData | DeepAnalysisData | WebSearchData | ComparisonData | null
 
 export interface OverlayProposal {
   id: string

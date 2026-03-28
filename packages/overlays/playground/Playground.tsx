@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { FactBannerOverlay, YoutubeCardOverlay, WebSearchOverlay } from '../src'
-import type { DeepAnalysisData, YoutubeData, WebSearchData } from '@streamgenius/shared'
+import { FactBannerOverlay, YoutubeCardOverlay, WebSearchOverlay, ComparisonOverlay } from '../src'
+import type { DeepAnalysisData, YoutubeData, WebSearchData, ComparisonData } from '@streamgenius/shared'
 
 const mockFact: DeepAnalysisData = {
   claim: "The first computer bug was an actual real bug - a moth found trapped in a Harvard Mark II computer in 1947.",
@@ -21,6 +21,20 @@ const mockYoutube: YoutubeData = {
   likeCount: 45000,
   thumbnailUrl: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=640&auto=format&fit=crop",
   publishedAt: "2024-03-01T12:00:00Z",
+}
+
+const mockComparison: ComparisonData = {
+  itemA: {
+    name: "React",
+    pros: ["Huge ecosystem", "Virtual DOM", "JSX"],
+    cons: ["Boilerplate", "Frequent updates"]
+  },
+  itemB: {
+    name: "Vue",
+    pros: ["Easy learning curve", "Reactivity system", "Single File Components"],
+    cons: ["Smaller job market", "Less corporate backing"]
+  },
+  summary: "Both are excellent choices. React is better for large teams, Vue for rapid prototyping."
 }
 
 const mockWebSearch: WebSearchData = {
@@ -45,9 +59,10 @@ const mockWebSearch: WebSearchData = {
 }
 
 const OVERLAYS = [
-  { id: 'fact',      label: 'Fact Banner',   icon: 'ℹ', accent: '#34A853' },
-  { id: 'youtube',   label: 'YouTube Card',  icon: '▶', accent: '#FF0000' },
-  { id: 'websearch', label: 'Web Search',    icon: '⌕', accent: '#4285F4' },
+  { id: 'fact',       label: 'Fact Banner',   icon: 'ℹ', accent: '#34A853' },
+  { id: 'youtube',    label: 'YouTube Card',  icon: '▶', accent: '#FF0000' },
+  { id: 'websearch',  label: 'Web Search',    icon: '⌕', accent: '#4285F4' },
+  { id: 'comparison', label: 'Comparison',    icon: '⇄', accent: '#a855f7' },
 ] as const
 
 type OverlayType = typeof OVERLAYS[number]['id']
@@ -291,9 +306,10 @@ export function Playground() {
             </div>
 
             {/* Active overlay */}
-            {activeOverlay === 'fact'      && <FactBannerOverlay data={mockFact} />}
-            {activeOverlay === 'youtube'   && <YoutubeCardOverlay data={mockYoutube} />}
-            {activeOverlay === 'websearch' && <WebSearchOverlay data={mockWebSearch} />}
+            {activeOverlay === 'fact'       && <FactBannerOverlay data={mockFact} />}
+            {activeOverlay === 'youtube'    && <YoutubeCardOverlay data={mockYoutube} />}
+            {activeOverlay === 'websearch'  && <WebSearchOverlay data={mockWebSearch} />}
+            {activeOverlay === 'comparison' && <ComparisonOverlay data={mockComparison} />}
           </div>
         </div>
       </main>
