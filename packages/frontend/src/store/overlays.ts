@@ -12,6 +12,7 @@ interface OverlayState {
   removeOverlay: (id: string) => void
   setTranscript: (text: string, isFinal: boolean) => void
   setReasoning: (text: string) => void
+  clearReasoning: () => void
 }
 
 export const useOverlayStore = create<OverlayState>((set) => ({

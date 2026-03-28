@@ -1,4 +1,4 @@
-export type OverlayType = 'youtube_card' | 'fact_banner' | 'comparison' | 'viewer_highlight'
+export type OverlayType = 'youtube_card' | 'fact_banner' | 'web_search'
 
 export type OverlayStatus = 'fetching' | 'ready' | 'error'
 
@@ -21,35 +21,28 @@ export interface YoutubeData {
   publishedAt: string
 }
 
-export interface FactData {
-  fact: string
-  source: string
-  sourceUrl: string
+export interface DeepAnalysisData {
+  claim: string
+  verdict: 'verified' | 'disputed' | 'unverified' | 'partially_true'
+  explanation: string
+  sources: Array<{
+    title: string
+    url: string
+    relevance: string
+  }>
   confidence: number
 }
 
-export interface ComparisonData {
-  itemA: {
-    name: string
-    pros: string[]
-    cons: string[]
-  }
-  itemB: {
-    name: string
-    pros: string[]
-    cons: string[]
-  }
-  summary: string
+export interface WebSearchData {
+  query: string
+  results: Array<{
+    title: string
+    link: string
+    snippet: string
+  }>
 }
 
-export interface ViewerData {
-  username: string
-  comment: string
-  timestamp: number
-  highlightReason: string
-}
-
-export type OverlayData = YoutubeData | FactData | ComparisonData | ViewerData | null
+export type OverlayData = YoutubeData | DeepAnalysisData | WebSearchData | null
 
 export interface OverlayProposal {
   id: string

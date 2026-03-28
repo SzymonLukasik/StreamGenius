@@ -1,10 +1,10 @@
 import { GoogleGenAI, Modality } from '@google/genai'
-import type { LiveServerMessage } from '@google/genai'
+import type { LiveServerMessage, Session } from '@google/genai'
 import type { FishjamAgent, AgentTrack, IncomingTrackData } from '@fishjam-cloud/js-server-sdk'
 import { geminiOutputAudioSettings, inputMimeType } from '@fishjam-cloud/js-server-sdk/gemini'
 import type { OverlayProposal } from '@streamgenius/shared'
-import { toolDefinitions, systemPrompt } from './tool-definitions.js'
 import { ToolExecutor } from './tool-executor.js'
+import { toolDefinitions, systemPrompt } from './tool-definitions.js'
 
 const GEMINI_MODEL = 'gemini-3.1-flash-live-preview'
 
@@ -43,6 +43,8 @@ export async function createGeminiLiveSession(
       responseModalities: [Modality.AUDIO],
       inputAudioTranscription: {},
       outputAudioTranscription: {},
+      systemInstruction: systemPrompt,
+      tools: [{ functionDeclarations: toolDefinitions }],
     },
     callbacks: {
       onopen: () => {
@@ -56,19 +58,21 @@ export async function createGeminiLiveSession(
         console.log('Gemini Live session closed', event)
       },
       onmessage: async (message: LiveServerMessage) => {
-        console.log('Gemini message received:', JSON.stringify(message).slice(0, 200))
-        await handleGeminiMessage(message, outputTrack, agent, toolExecutor, onTranscript, onReasoning)
+        await handleGeminiMessage(
+          message,
+          session,
+          outputTrack,
+          agent,
+          toolExecutor,
+          onTranscript,
+          onReasoning
+        )
       },
     },
   })
 
   // Forward audio from Fishjam to Gemini
-  let audioChunkCount = 0
   agent.on('trackData', (trackData: IncomingTrackData) => {
-    audioChunkCount++
-    if (audioChunkCount % 50 === 1) {
-      console.log(`Forwarding audio chunk #${audioChunkCount} to Gemini (${trackData.data.length} bytes)`)
-    }
     session.sendRealtimeInput({
       audio: {
         mimeType: inputMimeType,
@@ -86,6 +90,7 @@ export async function createGeminiLiveSession(
 
 async function handleGeminiMessage(
   message: LiveServerMessage,
+  session: Session,
   outputTrack: AgentTrack,
   agent: FishjamAgent,
   toolExecutor: ToolExecutor,
@@ -95,38 +100,58 @@ async function handleGeminiMessage(
   const serverContent = message.serverContent
 
   // Handle input audio transcription (what the user said)
-  // This is nested inside serverContent
-  const inputTranscription = (serverContent as Record<string, unknown>)?.inputTranscription as { text?: string } | undefined
+  const inputTranscription = (serverContent as Record<string, unknown>)?.inputTranscription as
+    | { text?: string }
+    | undefined
   if (inputTranscription?.text) {
-    console.log('User said:', inputTranscription.text)
     onTranscript(inputTranscription.text, true)
   }
 
   // Handle output audio transcription (what Gemini is saying)
-  const outputTranscription = (serverContent as Record<string, unknown>)?.outputTranscription as { text?: string } | undefined
+  const outputTranscription = (serverContent as Record<string, unknown>)?.outputTranscription as
+    | { text?: string }
+    | undefined
   if (outputTranscription?.text) {
-    console.log('Gemini said:', outputTranscription.text)
     onReasoning(outputTranscription.text)
   }
 
   if (!serverContent) {
     // Check for tool calls
     if (message.toolCall) {
+      const functionResponses: Array<{
+        id: string
+        name: string
+        response: { result: unknown }
+      }> = []
+
       for (const fc of message.toolCall.functionCalls || []) {
-        if (!fc.name) continue
+        if (!fc.name || !fc.id) continue
         console.log(`Tool called: ${fc.name}`, fc.args)
-        await toolExecutor.execute({
+
+        const result = await toolExecutor.execute({
           name: fc.name,
           args: (fc.args || {}) as Record<string, unknown>,
         })
+
+        // Collect responses to send back to Gemini
+        functionResponses.push({
+          id: fc.id,
+          name: fc.name,
+          response: { result: result.response },
+        })
+      }
+
+      // Send all tool responses back to Gemini
+      if (functionResponses.length > 0) {
+        console.log('Sending tool responses back to Gemini:', functionResponses.map((r) => r.name))
+        session.sendToolResponse({ functionResponses })
       }
     }
     return
   }
 
-  // Handle interruption
+  // Handle interruption - stop Gemini's audio output when user starts speaking
   if (serverContent.interrupted) {
-    console.log('Agent was interrupted by user')
     agent.interruptTrack(outputTrack.id)
   }
 

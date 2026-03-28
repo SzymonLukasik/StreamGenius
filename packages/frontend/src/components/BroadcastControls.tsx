@@ -14,24 +14,16 @@ function BroadcastControlsInner() {
   useEffect(() => {
     setFishjamCallbacks({
       onRoomCreated: async (roomId, streamerToken) => {
-        console.log('Room created, joining Fishjam:', roomId)
-        console.log('Streamer token:', streamerToken.slice(0, 20) + '...')
         if (pendingStart) {
           setPendingStart(false)
           try {
-            console.log('Calling startBroadcast...')
             await startBroadcast(streamerToken, roomId)
-            console.log('startBroadcast completed successfully')
           } catch (err) {
             console.error('Failed to start broadcast:', err)
           }
-        } else {
-          console.log('pendingStart is false, not starting broadcast')
         }
       },
-      onRoomClosed: (roomId) => {
-        console.log('Room closed:', roomId)
-      },
+      onRoomClosed: () => {},
     })
   }, [pendingStart, startBroadcast])
 

@@ -1,25 +1,36 @@
 system_prompt: |
-  You are StreamGenius, an AI assistant for live streamers.
-  Your role is to listen to the streamer's speech and identify opportunities to provide helpful visual overlays for their audience.
+  You are StreamGenius, an AI co-pilot for live streamers.
+  Listen to the transcript and help enhance the stream with relevant overlays.
 
-  When the streamer mentions:
-  - A YouTube video, tutorial, or channel -> call fetch_youtube_video
-  - A factual claim, statistic, or verifiable information -> call verify_fact
-  - A comparison between two things (X vs Y, comparing options) -> call create_comparison
-  - A viewer's comment or question they want to highlight -> call highlight_viewer
+  You have two types of tools:
+  1. SEARCH tools - fetch data and return it to you for evaluation
+  2. DISPLAY tool - show an overlay to viewers
 
-  Be proactive but not intrusive. Only trigger overlays when genuinely helpful to the audience.
-  Focus on creating value for viewers by providing relevant visual information.
+  WORKFLOW:
+  1. When you detect something worth showing, first SEARCH for the data
+  2. Review the search results - is this relevant? Is it what the streamer meant?
+  3. If relevant, call show_overlay with the data
 
-  IMPORTANT: Trigger function calls when you detect clear intent, don't wait for explicit requests.
-  For example, if the streamer says "React is faster than Angular in most benchmarks", call create_comparison.
-  If they say "according to the Stack Overflow survey", call verify_fact.
+  CRITICAL RULES - FOLLOW THESE STRICTLY:
+  - NEVER call the same search tool twice for the same topic
+  - ONE search per topic, then evaluate and decide
+  - If you already searched for "whales" do NOT search for "whale research" or "whale facts"
+  - Maximum 1 overlay per distinct topic mentioned
+  - Wait for search results before calling another tool
+
+  SEARCH TRIGGERS (pick ONE per topic):
+  - search_youtube: ONLY when a specific video/channel is mentioned
+  - search_web: For technical concepts needing reference links
+  - analyze_claim: For factual claims with statistics/numbers
+
+  After ONE search, evaluate:
+  - Is this relevant?
+  - Would viewers benefit?
+  - Then call show_overlay OR move on. Do not search again.
 
 tools:
-  - name: fetch_youtube_video
-    description: |
-      Fetch metadata for a YouTube video when the streamer mentions a specific video, channel, or tutorial.
-      Use this when they say things like "check out this video", "that React tutorial", or mention a YouTuber.
+  - name: search_youtube
+    description: Search YouTube for a video. Returns video metadata for you to evaluate before deciding to display.
     parameters:
       type: object
       required:
@@ -27,15 +38,24 @@ tools:
       properties:
         query:
           type: string
-          description: Search query or video title/topic mentioned by the streamer
-        channelName:
+          description: Search query based on what the streamer mentioned
+        channel:
           type: string
-          description: Optional channel name if mentioned
+          description: Channel name if specifically mentioned
 
-  - name: verify_fact
-    description: |
-      Verify a factual claim, statistic, or piece of information mentioned by the streamer.
-      Use this when they cite numbers, statistics, historical facts, or make claims that could be verified.
+  - name: search_web
+    description: Search the web for information. Returns top results for you to evaluate before deciding to display.
+    parameters:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: Search query for the topic
+
+  - name: analyze_claim
+    description: Analyze a factual claim for accuracy. Returns verdict and sources for you to evaluate before deciding to display.
     parameters:
       type: object
       required:
@@ -43,45 +63,22 @@ tools:
       properties:
         claim:
           type: string
-          description: The factual claim or statistic to verify
-        context:
+          description: The factual claim or statement to analyze
+        topic:
           type: string
-          description: Additional context about the claim
+          description: The broader topic for context
 
-  - name: create_comparison
-    description: |
-      Create a comparison between two items when the streamer compares technologies, products, or concepts.
-      Use this when they say things like "React vs Vue", "comparing X to Y", or discuss pros and cons.
+  - name: show_overlay
+    description: Display the search result as an overlay to stream viewers. Call this AFTER a search tool returns relevant results. The overlay will automatically use the data from your last search.
     parameters:
       type: object
       required:
-        - itemA
-        - itemB
+        - overlay_type
       properties:
-        itemA:
+        overlay_type:
           type: string
-          description: First item being compared
-        itemB:
-          type: string
-          description: Second item being compared
-        aspectsToCompare:
-          type: array
-          items:
-            type: string
-          description: Specific aspects to compare (e.g., performance, ease of use)
-
-  - name: highlight_viewer
-    description: |
-      Highlight a viewer comment or question on stream when the streamer reads or references a comment from chat.
-    parameters:
-      type: object
-      required:
-        - username
-        - comment
-      properties:
-        username:
-          type: string
-          description: Viewer username
-        comment:
-          type: string
-          description: The comment or question to highlight
+          enum:
+            - youtube_card
+            - web_search
+            - fact_banner
+          description: Type of overlay to display (should match your last search type)

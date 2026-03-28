@@ -4,7 +4,6 @@ import type { ClientMessage, ServerMessage } from '@streamgenius/shared'
 import { serverMessageSchema } from '@streamgenius/shared'
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001'
-console.log('WebSocket URL:', WS_URL)
 const RECONNECT_DELAY = 3000
 
 interface FishjamCallbacks {
@@ -43,7 +42,6 @@ function connect() {
   globalWs = new WebSocket(WS_URL)
 
   globalWs.onopen = () => {
-    console.log('WebSocket connected')
     globalState = { ...globalState, isConnected: true, reconnecting: false }
     notifyListeners()
   }
@@ -65,16 +63,12 @@ function connect() {
   }
 
   globalWs.onclose = () => {
-    console.log('WebSocket disconnected')
     globalState = { ...globalState, isConnected: false, sessionId: null }
     notifyListeners()
-
     setTimeout(connect, RECONNECT_DELAY)
   }
 
-  globalWs.onerror = (err) => {
-    console.error('WebSocket error:', err)
-  }
+  globalWs.onerror = () => {}
 
   globalState.sendMessage = (message: ClientMessage) => {
     if (globalWs?.readyState === WebSocket.OPEN) {
@@ -106,12 +100,10 @@ function handleServerMessage(message: ServerMessage) {
       break
 
     case 'fishjam_room_created':
-      console.log('Received fishjam_room_created:', message.roomId)
       fishjamCallbacks.onRoomCreated?.(message.roomId, message.streamerToken)
       break
 
     case 'fishjam_room_closed':
-      console.log('Received fishjam_room_closed:', message.roomId)
       fishjamCallbacks.onRoomClosed?.(message.roomId)
       break
 

@@ -4,9 +4,8 @@ export type {
   OverlayStatus,
   ClientOverlayStatus,
   YoutubeData,
-  FactData,
-  ComparisonData,
-  ViewerData,
+  DeepAnalysisData,
+  WebSearchData,
   OverlayData,
   OverlayProposal,
   ClientOverlay,
@@ -29,9 +28,8 @@ export { isClientMessage, isServerMessage } from './types/websocket.js'
 // Validators
 export {
   youtubeDataSchema,
-  factDataSchema,
-  comparisonDataSchema,
-  viewerDataSchema,
+  deepAnalysisDataSchema,
+  webSearchDataSchema,
   overlayTypeSchema,
   overlayStatusSchema,
   overlayDataSchema,

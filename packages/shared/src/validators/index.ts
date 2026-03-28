@@ -10,48 +10,43 @@ export const youtubeDataSchema = z.object({
   publishedAt: z.string(),
 })
 
-export const factDataSchema = z.object({
-  fact: z.string(),
-  source: z.string(),
-  sourceUrl: z.string().url(),
+export const deepAnalysisDataSchema = z.object({
+  claim: z.string(),
+  verdict: z.enum(['verified', 'disputed', 'unverified', 'partially_true']),
+  explanation: z.string(),
+  sources: z.array(
+    z.object({
+      title: z.string(),
+      url: z.string(),
+      relevance: z.string(),
+    })
+  ),
   confidence: z.number().min(0).max(1),
 })
 
-export const comparisonDataSchema = z.object({
-  itemA: z.object({
-    name: z.string(),
-    pros: z.array(z.string()),
-    cons: z.array(z.string()),
-  }),
-  itemB: z.object({
-    name: z.string(),
-    pros: z.array(z.string()),
-    cons: z.array(z.string()),
-  }),
-  summary: z.string(),
-})
-
-export const viewerDataSchema = z.object({
-  username: z.string(),
-  comment: z.string(),
-  timestamp: z.number(),
-  highlightReason: z.string(),
+export const webSearchDataSchema = z.object({
+  query: z.string(),
+  results: z.array(
+    z.object({
+      title: z.string(),
+      link: z.string(),
+      snippet: z.string(),
+    })
+  ),
 })
 
 export const overlayTypeSchema = z.enum([
   'youtube_card',
   'fact_banner',
-  'comparison',
-  'viewer_highlight',
+  'web_search',
 ])
 
 export const overlayStatusSchema = z.enum(['fetching', 'ready', 'error'])
 
 export const overlayDataSchema = z.union([
   youtubeDataSchema,
-  factDataSchema,
-  comparisonDataSchema,
-  viewerDataSchema,
+  deepAnalysisDataSchema,
+  webSearchDataSchema,
   z.null(),
 ])
 
