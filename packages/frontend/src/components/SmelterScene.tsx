@@ -35,9 +35,9 @@ export function SmelterScene() {
 
       <View
         style={{
-          left: 36,
-          bottom: 34,
-          width: 1208,
+          top: 80,
+          left: 40,
+          width: 1080,
           direction: 'column',
         }}
       >
@@ -45,7 +45,7 @@ export function SmelterScene() {
           <View
             key={overlay.id}
             id={`overlay-${overlay.id}`}
-            style={{ paddingBottom: 14 }}
+            style={{ paddingTop: 16 }}
             transition={{ durationMs: 240, easingFunction: 'linear' }}
           >
             <OverlayCard overlay={overlay} />
@@ -56,34 +56,65 @@ export function SmelterScene() {
       <View
         style={{
           top: 20,
-          right: 20,
-          backgroundColor: '#000000B0',
-          borderRadius: 12,
-          paddingHorizontal: 14,
-          paddingVertical: 10,
+          left: 20,
+          width: 200,
+          height: 48,
+          backgroundColor: '#000000D0',
+          borderRadius: 8,
+          paddingLeft: 12,
+          paddingTop: 8,
           borderWidth: 1,
           borderColor: '#FFFFFF1F',
-          direction: 'column',
+          direction: 'row',
         }}
       >
-        <Text
+        <View
           style={{
-            fontSize: 20,
-            color: '#F8FAFC',
-            fontWeight: 'bold',
+            width: 44,
+            height: 24,
+            backgroundColor: '#DC2626',
+            borderRadius: 4,
+            paddingLeft: 8,
+            paddingTop: 4,
           }}
         >
-          StreamGenius Live
-        </Text>
-        <Text
-          style={{
-            fontSize: 12,
-            color: '#CBD5E1',
-            fontWeight: 'medium',
-          }}
-        >
-          Composed by Smelter
-        </Text>
+          <Text
+            style={{
+              fontSize: 12,
+              lineHeight: 16,
+              color: '#FFFFFF',
+              fontWeight: 'bold',
+              fontFamily: 'Inter',
+            }}
+          >
+            LIVE
+          </Text>
+        </View>
+
+        <View style={{ width: 10, height: 1 }} />
+
+        <View style={{ width: 130, height: 36, direction: 'column' }}>
+          <Text
+            style={{
+              fontSize: 14,
+              color: '#F8FAFC',
+              fontWeight: 'bold',
+              fontFamily: 'Inter',
+            }}
+          >
+            StreamGenius Live
+          </Text>
+          <Text
+            style={{
+              fontSize: 10,
+              color: '#CBD5E1',
+              fontWeight: 'medium',
+              fontFamily: 'Inter',
+            }}
+          >
+            Composed by Smelter
+          </Text>
+        </View>
       </View>
     </View>
   )
@@ -184,8 +215,10 @@ function CardShell({
         borderRadius: 20,
         borderWidth: 1,
         borderColor: '#FFFFFF1A',
-        paddingHorizontal: 22,
-        paddingVertical: 18,
+        paddingLeft: 22,
+        paddingRight: 22,
+        paddingTop: 18,
+        paddingBottom: 18,
         direction: 'column',
         boxShadow: [
           {
@@ -202,8 +235,10 @@ function CardShell({
           height: 30,
           backgroundColor: accentColor,
           borderRadius: 15,
-          paddingHorizontal: 10,
-          paddingVertical: 5,
+          paddingLeft: 10,
+          paddingRight: 10,
+          paddingTop: 5,
+          paddingBottom: 5,
         }}
       >
         <Text

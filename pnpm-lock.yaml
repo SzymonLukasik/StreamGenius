@@ -84,6 +84,9 @@ importers:
 
   packages/frontend:
     dependencies:
+      '@expo-google-fonts/inter':
+        specifier: ^0.4.2
+        version: 0.4.2
       '@fishjam-cloud/react-client':
         specifier: ^0.25.3
         version: 0.25.3(react@18.3.1)
@@ -789,6 +792,10 @@ packages:
     resolution: {integrity: sha512-d9zaMRSTIKDLhctzH12MtXvJKSSUhaHcjV+2Z+GK+EEY7XKpP5yR4x+N3TAcHTcu963nIr+TMcCb4DBCYX1z6Q==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     dev: true
+
+  /@expo-google-fonts/inter@0.4.2:
+    resolution: {integrity: sha512-syfiImMaDmq7cFi0of+waE2M4uSCyd16zgyWxdPOY7fN2VBmSLKEzkfbZgeOjJq61kSqPBNNtXjggiQiSD6gMQ==}
+    dev: false
 
   /@fishjam-cloud/js-server-sdk@0.25.5(@google/genai@1.46.0):
     resolution: {integrity: sha512-w3CpLAE824gAUgMA+NhfrgxzzlmTtN+v8O38Dg6vF4xfEUcB4aqreGSTcwqCKz3brp1dJ3jHJ5Wa1E7DVIaQ9g==}

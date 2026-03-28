@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"FactBannerOverlay\\\\|YoutubeCardOverlay\\\\|WebSearchOverlay\\\\|ComparisonOverlay\" C:UsersjurasOneDriveDokumentystreamGeniusStreamGenius/packages/frontend --include=*.tsx --include=*.ts)",
+      "Bash(find C:UsersjurasOneDriveDokumentystreamGeniusStreamGenius -name tools.yaml -o -name .env*)",
+      "Bash(grep -r \"VideoRenderer\\\\|OverlayRenderer\\\\|Render.*overlay\\\\|overlay.*render\" C:UsersjurasOneDriveDokumentystreamGeniusStreamGenius --include=*.tsx --include=*.ts)",
+      "Bash(xargs wc:*)",
+      "Bash(grep:*)",
+      "Bash(pnpm --filter @streamgenius/shared build)",
+      "Bash(pnpm --filter @streamgenius/backend typecheck)",
+      "Bash(pnpm --filter @streamgenius/frontend typecheck)",
+      "Bash(pnpm install:*)",
+      "Bash(find C:UsersjurasOneDriveDokumentystreamGeniusStreamGeniusnode_modules@swmansion -name *.d.ts)",
+      "Bash(find C:/Users/juras/OneDrive/Dokumenty/streamGenius/StreamGenius -path */node_modules/@swmansion* -name *.d.ts)",
+      "Bash(curl -L \"https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2\" -o \"C:/Users/juras/OneDrive/Dokumenty/streamGenius/StreamGenius/packages/frontend/public/Inter.woff2\")",
+      "Bash(curl -L \"https://github.com/rsms/inter/releases/download/v4.0/Inter-4.0.zip\" -o /tmp/inter.zip)",
+      "Read(//c/tmp/**)",
+      "Bash(unzip -o inter.zip \"Inter Desktop/Inter-Regular.ttf\" \"Inter Desktop/Inter-Bold.ttf\" \"Inter Desktop/Inter-Medium.ttf\")",
+      "Bash(unzip -l /tmp/inter.zip)",
+      "Bash(unzip -p /tmp/inter.zip \"InterVariable.ttf\")",
+      "Bash(\"C:/Users/juras/OneDrive/Dokumenty/streamGenius/StreamGenius/packages/frontend/public/Inter.ttf\")"
+    ]
+  }
+}

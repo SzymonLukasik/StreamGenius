@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Smelter, { setWasmBundleUrl } from '@swmansion/smelter-web-wasm'
 import { SmelterScene, SMELTER_CAMERA_INPUT_ID, SMELTER_OUTPUT_RESOLUTION } from '../components/SmelterScene'
 
+import InterRegularUrl from '@expo-google-fonts/inter/400Regular/Inter_400Regular.ttf?url'
+import InterBoldUrl from '@expo-google-fonts/inter/700Bold/Inter_700Bold.ttf?url'
+
 setWasmBundleUrl('/smelter.wasm')
 
 const SMELTER_OUTPUT_ID = 'program'
@@ -49,7 +52,11 @@ export function useSmelterComposition(): UseSmelterCompositionResult {
 
       try {
         await smelter.init()
-        await smelter.registerFont('/Inter.ttf')
+        
+        // Fetch and register fonts
+        await smelter.registerFont(InterRegularUrl)
+        await smelter.registerFont(InterBoldUrl)
+
         await smelter.registerInput(SMELTER_CAMERA_INPUT_ID, {
           type: 'stream',
           stream: cameraStream,

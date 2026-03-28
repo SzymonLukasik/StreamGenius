@@ -2,14 +2,12 @@ import { useRef, useEffect } from 'react'
 
 interface StreamPreviewProps {
   stream: MediaStream | null
-  isLive: boolean
   compositionReady: boolean
   compositionError: string | null
 }
 
 export function StreamPreview({
   stream,
-  isLive,
   compositionReady,
   compositionError,
 }: StreamPreviewProps) {
@@ -36,13 +34,6 @@ export function StreamPreview({
         ) : (
           <div style={styles.placeholder}>
             <span style={styles.placeholderText}>Camera not active</span>
-          </div>
-        )}
-
-        {isLive && (
-          <div style={styles.liveIndicator}>
-            <span style={styles.liveDot} />
-            <span>LIVE</span>
           </div>
         )}
       </div>
@@ -98,27 +89,6 @@ const styles: Record<string, React.CSSProperties> = {
   placeholderText: {
     color: '#666',
     fontSize: '14px',
-  },
-  liveIndicator: {
-    position: 'absolute',
-    top: '12px',
-    left: '12px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '4px 10px',
-    backgroundColor: 'rgba(239, 68, 68, 0.9)',
-    borderRadius: '4px',
-    color: '#fff',
-    fontSize: '12px',
-    fontWeight: 600,
-  },
-  liveDot: {
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
-    backgroundColor: '#fff',
-    animation: 'pulse 1.5s infinite',
   },
   info: {
     padding: '8px 0',

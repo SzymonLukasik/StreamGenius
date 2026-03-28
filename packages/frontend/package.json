@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.2",
     "@fishjam-cloud/react-client": "^0.25.3",
     "@streamgenius/shared": "workspace:*",
     "@swmansion/smelter": "^0.3.0",
