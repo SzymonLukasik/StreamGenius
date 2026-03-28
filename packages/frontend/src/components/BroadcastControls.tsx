@@ -6,7 +6,12 @@ import { StreamPreview } from './StreamPreview'
 
 type Mode = 'idle' | 'host' | 'guest'
 
-function BroadcastControlsInner() {
+interface BroadcastControlsProps {
+  onMuteChange?: (muted: boolean) => void
+  onCapturingChange?: (capturing: boolean) => void
+}
+
+function BroadcastControlsInner({ onMuteChange, onCapturingChange }: BroadcastControlsProps) {
   const {
     state,
     startBroadcast,
@@ -42,6 +47,14 @@ function BroadcastControlsInner() {
       setGuestName(name)
     }
   }, [])
+
+  useEffect(() => {
+    onMuteChange?.(isMuted)
+  }, [isMuted, onMuteChange])
+
+  useEffect(() => {
+    onCapturingChange?.(state.isConnected)
+  }, [state.isConnected, onCapturingChange])
 
   useEffect(() => {
     pendingStartRef.current = pendingStart
@@ -261,7 +274,7 @@ function BroadcastControlsInner() {
   )
 }
 
-export function BroadcastControls() {
+export function BroadcastControls(props: BroadcastControlsProps) {
   const { isEnabled } = useFishjamEnabled()
 
   if (!isEnabled) {
@@ -275,7 +288,7 @@ export function BroadcastControls() {
     )
   }
 
-  return <BroadcastControlsInner />
+  return <BroadcastControlsInner {...props} />
 }
 
 const styles: Record<string, React.CSSProperties> = {

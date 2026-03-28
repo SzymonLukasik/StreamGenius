@@ -5,8 +5,9 @@ import { useSmelterComposition } from './useSmelterComposition'
 const SMELTER_SOURCE_ID = 'smelter-output'
 const CAMERA_CONSTRAINTS: MediaStreamConstraints = {
   video: {
-    width: { ideal: 1280 },
-    height: { ideal: 720 },
+    width: { ideal: 1280, min: 640 },
+    height: { ideal: 720, min: 360 },
+    aspectRatio: { ideal: 16 / 9 },
     frameRate: { ideal: 30, max: 30 },
   },
   audio: false,
@@ -71,6 +72,10 @@ export function useFishjamBroadcast(): UseFishjamBroadcastResult {
       try {
         const cameraStream = await navigator.mediaDevices.getUserMedia(CAMERA_CONSTRAINTS)
         localCameraStreamRef.current = cameraStream
+
+        const videoTrack = cameraStream.getVideoTracks()[0]
+        const settings = videoTrack?.getSettings()
+        console.log('[Camera] Resolution:', settings?.width, 'x', settings?.height, 'aspect:', settings?.aspectRatio)
 
         const stream = await startComposition(cameraStream)
         await setCustomSourceStream(stream)

@@ -5,8 +5,8 @@ import { useOverlayStore } from '../store/overlays'
 
 export const SMELTER_CAMERA_INPUT_ID = 'camera'
 export const SMELTER_OUTPUT_RESOLUTION = {
-  width: 1280,
-  height: 720,
+  width: 960,
+  height: 540,
 }
 
 const ACTIVE_OVERLAY_STATUSES = new Set(['approved', 'rendering', 'displayed'])
@@ -25,11 +25,8 @@ export function SmelterScene() {
     >
       <Rescaler
         style={{
-          top: 0,
-          left: 0,
           width: SMELTER_OUTPUT_RESOLUTION.width,
           height: SMELTER_OUTPUT_RESOLUTION.height,
-          rescaleMode: 'fill',
         }}
       >
         <InputStream inputId={SMELTER_CAMERA_INPUT_ID} />
@@ -38,9 +35,9 @@ export function SmelterScene() {
       {activeOverlays.length > 0 && (
         <View
           style={{
-            left: 36,
-            top: SMELTER_OUTPUT_RESOLUTION.height - 220,
-            width: 1208,
+            left: 24,
+            top: SMELTER_OUTPUT_RESOLUTION.height - 160,
+            width: 900,
             direction: 'column',
           }}
         >
@@ -59,13 +56,13 @@ export function SmelterScene() {
 
       <View
         style={{
-          top: 20,
-          left: 1280 - 220,
-          width: 200,
+          top: 16,
+          left: SMELTER_OUTPUT_RESOLUTION.width - 160,
+          width: 145,
           backgroundColor: '#000000B0',
-          borderRadius: 12,
-          paddingHorizontal: 14,
-          paddingVertical: 10,
+          borderRadius: 8,
+          paddingHorizontal: 10,
+          paddingVertical: 8,
           borderWidth: 1,
           borderColor: '#FFFFFF1F',
           direction: 'column',
@@ -73,21 +70,21 @@ export function SmelterScene() {
       >
         <Text
           style={{
-            fontSize: 18,
+            fontSize: 14,
             color: '#F8FAFC',
             fontWeight: 'bold',
           }}
         >
-          StreamGenius Live
+          StreamGenius
         </Text>
         <Text
           style={{
-            fontSize: 11,
+            fontSize: 9,
             color: '#CBD5E1',
             fontWeight: 'medium',
           }}
         >
-          Composed by Smelter
+          Live
         </Text>
       </View>
     </View>
@@ -112,11 +109,26 @@ function OverlayCard({ overlay }: { overlay: ClientOverlay }) {
 }
 
 function YoutubeOverlay({ data }: { data: YoutubeData }) {
+  const thumbnailSource = data.thumbnailBase64 || data.thumbnailUrl
+
   return (
     <CardShell accentColor="#DC2626" eyebrow="YouTube">
-      <Text style={styles.title}>{data.title}</Text>
-      <Text style={styles.body}>{formatYoutubeMeta(data)}</Text>
-      <Text style={styles.caption}>{formatPublishedDate(data.publishedAt)}</Text>
+      <View style={{ direction: 'row' }}>
+        {thumbnailSource && (
+          <Image
+            source={thumbnailSource}
+            style={{
+              width: 135,
+              height: 76,
+            }}
+          />
+        )}
+        <View style={{ paddingLeft: 12, direction: 'column', width: 580 }}>
+          <Text style={styles.title}>{data.title}</Text>
+          <Text style={styles.body}>{formatYoutubeMeta(data)}</Text>
+          <Text style={styles.caption}>{formatPublishedDate(data.publishedAt)}</Text>
+        </View>
+      </View>
     </CardShell>
   )
 }
@@ -147,8 +159,8 @@ function WebSearchOverlay({ data }: { data: WebSearchData }) {
 function ComparisonOverlay({ data }: { data: ComparisonData }) {
   return (
     <CardShell accentColor="#7C3AED" eyebrow={`${data.itemA.name} vs ${data.itemB.name}`}>
-      <View style={{ direction: 'row', width: 980 }}>
-        <View style={{ width: 482, paddingRight: 16, direction: 'column' }}>
+      <View style={{ direction: 'row', width: 720 }}>
+        <View style={{ width: 350, paddingRight: 12, direction: 'column' }}>
           <Text style={styles.colTitle}>{data.itemA.name}</Text>
           {data.itemA.pros.map((pro, i) => (
             <Text key={i} style={{ ...styles.colBody, color: '#4ADE80' }}>+ {pro}</Text>
@@ -157,7 +169,7 @@ function ComparisonOverlay({ data }: { data: ComparisonData }) {
             <Text key={i} style={{ ...styles.colBody, color: '#F87171' }}>- {con}</Text>
           ))}
         </View>
-        <View style={{ width: 482, direction: 'column' }}>
+        <View style={{ width: 350, direction: 'column' }}>
           <Text style={styles.colTitle}>{data.itemB.name}</Text>
           {data.itemB.pros.map((pro, i) => (
             <Text key={i} style={{ ...styles.colBody, color: '#4ADE80' }}>+ {pro}</Text>
@@ -184,18 +196,18 @@ function CardShell({
   return (
     <View
       style={{
-        width: 1080,
+        width: 800,
         backgroundColor: '#08111FD0',
-        borderRadius: 20,
+        borderRadius: 14,
         borderWidth: 1,
         borderColor: '#FFFFFF1A',
-        paddingHorizontal: 22,
-        paddingVertical: 18,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
         direction: 'column',
         boxShadow: [
           {
-            offsetY: 18,
-            blurRadius: 36,
+            offsetY: 12,
+            blurRadius: 24,
             color: '#02061788',
           },
         ],
@@ -203,17 +215,17 @@ function CardShell({
     >
       <View
         style={{
-          width: 600,
-          height: 30,
+          width: 450,
+          height: 22,
           backgroundColor: accentColor,
-          borderRadius: 15,
-          paddingHorizontal: 10,
-          paddingVertical: 5,
+          borderRadius: 11,
+          paddingHorizontal: 8,
+          paddingVertical: 3,
         }}
       >
         <Text
           style={{
-            fontSize: 14,
+            fontSize: 11,
             color: '#F8FAFC',
             fontWeight: 'bold',
             align: 'center',
@@ -223,49 +235,49 @@ function CardShell({
         </Text>
       </View>
 
-      <View style={{ paddingTop: 14, direction: 'column' }}>{children}</View>
+      <View style={{ paddingTop: 10, direction: 'column' }}>{children}</View>
     </View>
   )
 }
 
 const styles = {
   title: {
-    fontSize: 28,
+    fontSize: 20,
     color: '#F8FAFC',
     fontWeight: 'bold' as const,
-    maxWidth: 980,
+    maxWidth: 720,
     wrap: 'word' as const,
   },
   body: {
-    fontSize: 18,
+    fontSize: 14,
     color: '#D6E0EA',
-    maxWidth: 980,
+    maxWidth: 720,
     wrap: 'word' as const,
   },
   caption: {
-    fontSize: 14,
+    fontSize: 11,
     color: '#94A3B8',
-    maxWidth: 980,
+    maxWidth: 720,
     wrap: 'word' as const,
   },
   resultTitle: {
-    fontSize: 20,
+    fontSize: 15,
     color: '#E2E8F0',
     fontWeight: 'bold' as const,
-    maxWidth: 980,
+    maxWidth: 720,
     wrap: 'word' as const,
   },
   colTitle: {
-    fontSize: 28,
+    fontSize: 20,
     color: '#F8FAFC',
     fontWeight: 'bold' as const,
-    maxWidth: 460,
+    maxWidth: 340,
     wrap: 'word' as const,
   },
   colBody: {
-    fontSize: 18,
+    fontSize: 14,
     color: '#D6E0EA',
-    maxWidth: 460,
+    maxWidth: 340,
     wrap: 'word' as const,
   },
 }

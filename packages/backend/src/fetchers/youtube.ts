@@ -1,6 +1,33 @@
 import type { YoutubeData } from '@streamgenius/shared'
+import { Jimp } from 'jimp'
 
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3'
+
+async function fetchThumbnailAsBase64(url: string): Promise<string | undefined> {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return undefined
+    const buffer = Buffer.from(await response.arrayBuffer())
+
+    // Convert to PNG using Jimp (Smelter WASM doesn't support JPEG)
+    const image = await Jimp.read(buffer)
+    const pngBuffer = await image.getBuffer('image/png')
+    const base64 = pngBuffer.toString('base64')
+
+    // Wrap PNG in SVG for Smelter WASM compatibility
+    const width = image.width
+    const height = image.height
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      <image href="data:image/png;base64,${base64}" width="${width}" height="${height}"/>
+    </svg>`
+    const svgBase64 = Buffer.from(svg).toString('base64')
+
+    return `data:image/svg+xml;base64,${svgBase64}`
+  } catch (err) {
+    console.error('Failed to fetch/convert thumbnail:', err)
+    return undefined
+  }
+}
 
 export async function fetchYoutubeVideo(
   query: string,
@@ -9,7 +36,7 @@ export async function fetchYoutubeVideo(
   const apiKey = process.env.YOUTUBE_API_KEY
   if (!apiKey) {
     console.error('YOUTUBE_API_KEY not set')
-    return getMockYoutubeData(query)
+    return await getMockYoutubeData(query)
   }
 
   try {
@@ -32,7 +59,7 @@ export async function fetchYoutubeVideo(
     const videoId = searchData.items?.[0]?.id?.videoId
     if (!videoId) {
       console.log('No video found for query:', query)
-      return getMockYoutubeData(query)
+      return await getMockYoutubeData(query)
     }
 
     // Get video details
@@ -63,30 +90,38 @@ export async function fetchYoutubeVideo(
     const video = videoData.items?.[0]
 
     if (!video) {
-      return getMockYoutubeData(query)
+      return await getMockYoutubeData(query)
     }
+
+    const thumbnailUrl = video.snippet.thumbnails.high?.url || video.snippet.thumbnails.default?.url || ''
+    const thumbnailBase64 = await fetchThumbnailAsBase64(thumbnailUrl)
 
     return {
       videoId,
       title: video.snippet.title,
       channelName: video.snippet.channelTitle,
-      thumbnailUrl: video.snippet.thumbnails.high?.url || video.snippet.thumbnails.default?.url || '',
+      thumbnailUrl,
+      thumbnailBase64,
       viewCount: parseInt(video.statistics.viewCount, 10) || 0,
       likeCount: parseInt(video.statistics.likeCount, 10) || 0,
       publishedAt: video.snippet.publishedAt,
     }
   } catch (error) {
     console.error('YouTube API error:', error)
-    return getMockYoutubeData(query)
+    return await getMockYoutubeData(query)
   }
 }
 
-function getMockYoutubeData(query: string): YoutubeData {
+async function getMockYoutubeData(query: string): Promise<YoutubeData> {
+  const thumbnailUrl = 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg'
+  const thumbnailBase64 = await fetchThumbnailAsBase64(thumbnailUrl)
+
   return {
     videoId: 'dQw4w9WgXcQ',
     title: `Video about: ${query}`,
     channelName: 'Sample Channel',
-    thumbnailUrl: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg',
+    thumbnailUrl,
+    thumbnailBase64,
     viewCount: 1000000,
     likeCount: 50000,
     publishedAt: new Date().toISOString(),

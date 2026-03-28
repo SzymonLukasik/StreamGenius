@@ -5,7 +5,7 @@ import { SmelterScene, SMELTER_CAMERA_INPUT_ID, SMELTER_OUTPUT_RESOLUTION } from
 setWasmBundleUrl('/smelter.wasm')
 
 const SMELTER_OUTPUT_ID = 'program'
-const DEFAULT_FRAMERATE = 30
+const DEFAULT_FRAMERATE = 24
 
 interface UseSmelterCompositionResult {
   composedStream: MediaStream | null
