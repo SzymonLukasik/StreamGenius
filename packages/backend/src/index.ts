@@ -1,4 +1,10 @@
+import * as dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { createServer } from './server.js'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
 
 const WS_PORT = parseInt(process.env.WS_PORT || '3002', 10)
 
